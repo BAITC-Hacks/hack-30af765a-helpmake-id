@@ -1,4 +1,4 @@
-export type Decision = { measure_id: string; district_code?: string }
+export type Decision = { measure_id: string; district_code?: string | null }
 export type Indicator = { id: string; direction: string; name: string; description: string; weight: number }
 export type District = { code: string; name: string; profile: string; population_share: number; map_anchor: { latitude: number; longitude: number; source: string }; indicators: Record<string, number> }
 export type Measure = { id: string; name: string; direction: string; scope: 'district' | 'city'; cost: number; lag: number; effects: Record<string, number> }
@@ -12,3 +12,10 @@ export type ActivatedSynergy = { measures: string[]; district_code: string; indi
 export type SimulationSuccess = { valid: true; dataset_version: string; dataset_hash: string; budget: number; spent: number; remaining_budget: number; decisions: Decision[]; violations: []; baseline_score: number; score: number; score_delta: number; city_average_before: number; city_average_after: number; critical_pairs_before: CriticalPair[]; critical_pairs_after: CriticalPair[]; weakest_district_before: string; weakest_district_after: string; districts: DistrictResult[]; measure_contributions: MeasureContribution[]; activated_synergies: ActivatedSynergy[]; quarters: Quarter[] }
 export type SimulationFailure = { valid: false; violations: { code: string; message: string }[] }
 export type Advisor = { status: 'available'; strengths: string; weaknesses: string; tradeoffs: string; remaining_critical_indicators: string } | { status: 'unavailable'; reason: string }
+export type RecommendationGoal = 'transport' | 'ecology' | 'weakest_district' | 'balanced'
+export type RecommendationConstraints = { max_spent?: number; target_district_code?: string; locked_measure_ids?: string[]; excluded_measure_ids?: string[] }
+export type Recommendation = { replaces: Decision; with_decision: Decision; decisions: Decision[]; spent: number; score: number; score_delta: number; tradeoff: string }
+export type RecommendationResponse = { status: 'available'; recommendations: Recommendation[] } | { status: 'unavailable'; reason: string }
+export type ScenarioSummary = { id: string; name: string; dataset_version: string; dataset_hash: string; score: number; spent: number; budget: number; created_at: string }
+export type SavedScenario = ScenarioSummary & { decisions: Decision[]; result: SimulationSuccess }
+export type ServerScenarioComparison = { left: ScenarioSummary; right: ScenarioSummary; dataset_version: string; dataset_hash: string; score_delta: number; spent_delta: number; remaining_budget_delta: number; districts: { district_code: string; score_delta: number; indicator_deltas: Record<string, number> }[]; critical_pairs_left: CriticalPair[]; critical_pairs_right: CriticalPair[]; resolved_critical_pairs: CriticalPair[]; new_critical_pairs: CriticalPair[] }

@@ -1,4 +1,4 @@
-import type { Advisor, DataSet, Decision, SimulationFailure, SimulationSuccess } from './types'
+import type { Advisor, DataSet, Decision, RecommendationConstraints, RecommendationGoal, RecommendationResponse, SavedScenario, ServerScenarioComparison, SimulationFailure, SimulationSuccess } from './types'
 
 const base = import.meta.env.VITE_API_BASE_URL || ''
 
@@ -19,3 +19,7 @@ async function request<T>(path: string, body?: unknown): Promise<T> {
 export const getData = () => request<DataSet>('/data')
 export const simulate = (decisions: Decision[]) => request<SimulationSuccess | SimulationFailure>('/simulate', { decisions })
 export const explain = (simulation_result: SimulationSuccess) => request<Advisor>('/advisor/explain', { simulation_result })
+export const recommend = (simulation_result: SimulationSuccess, goal: RecommendationGoal, constraints: RecommendationConstraints) => request<RecommendationResponse>('/advisor/recommend', { simulation_result, goal, constraints })
+export const createScenario = (name: string, decisions: Decision[]) => request<SavedScenario>('/scenarios', { name, decisions })
+export const getScenario = (id: string) => request<SavedScenario>(`/scenarios/${encodeURIComponent(id)}`)
+export const compareScenarios = (left_id: string, right_id: string) => request<ServerScenarioComparison>('/scenarios/compare', { left_id, right_id })

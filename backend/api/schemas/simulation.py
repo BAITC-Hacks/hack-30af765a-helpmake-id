@@ -79,6 +79,7 @@ class IncompatibilityData(pydantic.BaseModel):
 class SimulationDataResponse(pydantic.BaseModel):
     budget: int
     horizon_quarters: int
+    baseline_score: float
     directions: list[str]
     indicators: list[IndicatorData]
     districts: list[DistrictData]

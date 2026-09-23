@@ -41,3 +41,7 @@ env/
 *.swp
 .DS_Store
 .claude/
+
+# Frontend
+node_modules/
+*.tsbuildinfo

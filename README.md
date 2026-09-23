@@ -3,6 +3,9 @@
 > HackAlem AI 2026 · Astana Innovations Special Track  
 > **Status:** Hackathon MVP in development
 
+The working Situation Center UI and Simulation API are documented in
+[IMPLEMENTATION.md](IMPLEMENTATION.md). Run those components with the commands there.
+
 ## Overview
 
 **Akim for 5 Hours** is an AI-assisted city-management simulator for exploring how a limited municipal budget can affect quality of life across hypothetical districts of Astana.

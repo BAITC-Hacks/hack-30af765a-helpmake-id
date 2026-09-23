@@ -1,6 +1,6 @@
 # API Conventions
 
-These instructions apply to `backend/src/api/`. They describe the required
+These instructions apply to `backend/api/`. They describe the required
 end-to-end pattern for adding or changing API resources.
 
 ## Layer Architecture
@@ -166,7 +166,7 @@ When adding a resource, update each layer in order:
 4. Define FastAPI routes in `v1/endpoints/<resources>.py`.
 5. Register the router in `v1/routers.py`.
 6. Change the table model first, then generate and review a Postgres migration
-   under `backend/src/migrations/postgres/versions/` for any schema change.
+   under `backend/migrations/postgres/versions/` for any schema change.
 7. Add tests under `tests/` for schemas, models, controllers, and endpoints.
 
 ## Imports
@@ -183,7 +183,7 @@ Exception: schema files must use direct sibling imports (`from . import fields`,
 
 ## Schemas
 
-- Use Pydantic v2 `BaseModel`. See `backend/src/api/schemas/CLAUDE.md` for details.
+- Use Pydantic v2 `BaseModel`. See `backend/api/schemas/CLAUDE.md` for details.
 - Request schemas must reject extra fields: `model_config = pydantic.ConfigDict(extra='forbid')`.
 - Use `fields.Int`, `fields.String`, `fields.Dict` for bounded/strict types.
 
@@ -194,7 +194,7 @@ Exception: schema files must use direct sibling imports (`from . import fields`,
   `response_description`, and `responses=responses.gen_responses([...])`.
 - Use `fastapi.Security(auth.get_current_user)` for authenticated routes.
 - Delegate all business logic to controllers. No DB queries in route functions.
-- See `backend/src/api/v1/endpoints/CLAUDE.md` for the full pattern.
+- See `backend/api/v1/endpoints/CLAUDE.md` for the full pattern.
 
 ## Controllers
 
@@ -229,11 +229,11 @@ Exception: schema files must use direct sibling imports (`from . import fields`,
 - Singular model results are plain `dict` values; collections are `list[dict]`.
   Models never construct API response schemas.
 - Translate known `asyncpg` constraint errors into domain exceptions.
-- See `backend/src/api/models/CLAUDE.md` for the full pattern.
+- See `backend/api/models/CLAUDE.md` for the full pattern.
 
 ## Permissions
 
-- RBAC is defined in `backend/src/api/permission.py` via the `Perm` enum.
+- RBAC is defined in `backend/api/permission.py` via the `Perm` enum.
 - Superusers (`is_superuser=True`) bypass all permission checks.
 - Use `permission.PermsRequired([Perm.X])` as a route dependency.
 

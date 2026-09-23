@@ -1,6 +1,6 @@
 # Backend Agent Instructions
 
-These instructions apply to all work under `backend/src/`. More specific instructions in
+These instructions apply to all work under `backend/`. More specific instructions in
 subdirectories override or extend this file.
 
 ## Stack and Style
@@ -61,7 +61,7 @@ subdirectories override or extend this file.
 
 ## Database and Migrations
 
-- Postgres migrations live under `backend/src/migrations/postgres/versions`.
+- Postgres migrations live under `backend/migrations/postgres/versions`.
 - SQLAlchemy `Table` definitions are the source of truth for the intended
   application schema. Define every column, type, nullability rule, server
   default, foreign key, unique/check constraint, and index in model metadata

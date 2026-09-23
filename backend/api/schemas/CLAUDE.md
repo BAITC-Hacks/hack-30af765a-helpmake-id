@@ -1,6 +1,6 @@
 # Schema Conventions
 
-These instructions apply to Pydantic schemas in `backend/src/api/schemas/`.
+These instructions apply to Pydantic schemas in `backend/api/schemas/`.
 
 ## Imports
 

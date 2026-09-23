@@ -1,0 +1,98 @@
+name: Frontend CI and deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - frontend/**
+      - deploy/deploy-frontend.sh
+      - .github/workflows/frontend.yml
+  pull_request:
+    paths:
+      - frontend/**
+      - deploy/deploy-frontend.sh
+      - .github/workflows/frontend.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Build for public API
+        working-directory: frontend
+        env:
+          VITE_API_BASE_URL: https://api.helpmake-id.live
+        run: npm run build
+      - name: Package static files
+        run: tar -C frontend/dist -czf "${RUNNER_TEMP}/frontend-dist.tar.gz" .
+      - uses: actions/upload-artifact@v7
+        with:
+          name: frontend-dist
+          path: ${{ runner.temp }}/frontend-dist.tar.gz
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
+
+  deploy:
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    concurrency:
+      group: frontend-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check latest main commit
+        id: latest
+        run: |
+          latest_sha="$(git ls-remote origin refs/heads/main | cut -f1)"
+          test -n "$latest_sha"
+          if [ "$latest_sha" = "$GITHUB_SHA" ]; then
+            echo 'deploy=true' >> "$GITHUB_OUTPUT"
+          else
+            echo "Skipping superseded commit $GITHUB_SHA"
+            echo 'deploy=false' >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/download-artifact@v8
+        if: steps.latest.outputs.deploy == 'true'
+        with:
+          name: frontend-dist
+          path: ${{ runner.temp }}
+      - name: Deploy static frontend
+        if: steps.latest.outputs.deploy == 'true'
+        shell: bash
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          if [ -z "$DEPLOY_SSH_KEY" ] || [ -z "$DEPLOY_KNOWN_HOSTS" ]; then
+            echo 'Set DEPLOY_SSH_KEY and DEPLOY_KNOWN_HOSTS in GitHub Actions secrets.' >&2
+            exit 1
+          fi
+          umask 077
+          key_file="${RUNNER_TEMP}/deploy_key"
+          hosts_file="${RUNNER_TEMP}/known_hosts"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$key_file"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$hosts_file"
+          ssh-keygen -F 20.124.93.89 -f "$hosts_file" > /dev/null
+          target='useradmin@20.124.93.89'
+          ssh_options=(-i "$key_file" -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$hosts_file")
+          ssh "${ssh_options[@]}" "$target" 'install -d -m 700 "$HOME/akim-ai-frontend"'
+          scp "${ssh_options[@]}" "${RUNNER_TEMP}/frontend-dist.tar.gz" deploy/deploy-frontend.sh "$target:akim-ai-frontend/"
+          ssh "${ssh_options[@]}" "$target" "bash \"\$HOME/akim-ai-frontend/deploy-frontend.sh\" \"\$HOME/akim-ai-frontend/frontend-dist.tar.gz\" $GITHUB_SHA"

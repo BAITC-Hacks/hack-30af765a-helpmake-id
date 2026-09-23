@@ -1,5 +1,14 @@
 # Backend CI/CD
 
+The separate [frontend workflow](../.github/workflows/frontend.yml) builds the
+Vite app with `VITE_API_BASE_URL=https://api.helpmake-id.live` and publishes it
+to `https://helpmake-id.live` on a frontend change to `main`. It uses the same
+`DEPLOY_SSH_KEY` and `DEPLOY_KNOWN_HOSTS` secrets in the `production`
+environment. Its server script locates the document root by matching the
+current live `index.html`, uploads hashed assets first, then replaces the
+index. The deploy user needs write access to that directory or passwordless
+`sudo` for the copy; an ambiguous or missing document root fails safely.
+
 GitHub Actions runs `make check`, `make test` (including the 90% coverage gate),
 and a Docker build for pull requests and pushes to `main`. A successful `main`
 run transfers that exact image over SSH and starts it on `backend-hr`. Docker

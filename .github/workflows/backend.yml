@@ -85,6 +85,12 @@ jobs:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
           DEPLOY_ENV_FILE: ${{ secrets.DEPLOY_ENV_FILE }}
+          AI_API_URL: ${{ vars.AI_API_URL }}
+          AI_MODEL: ${{ vars.AI_MODEL }}
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_API_KEY_1: ${{ secrets.AI_API_KEY_1 }}
+          AI_API_KEY_2: ${{ secrets.AI_API_KEY_2 }}
+          AI_API_KEY_3: ${{ secrets.AI_API_KEY_3 }}
         run: |
           set -euo pipefail
           if [ -z "$DEPLOY_SSH_KEY" ] || [ -z "$DEPLOY_KNOWN_HOSTS" ]; then
@@ -103,6 +109,16 @@ jobs:
           else
             printf 'CORS_ORIGINS=https://helpmake-id.live\n' > "$env_file"
           fi
+          for name in AI_API_URL AI_MODEL AI_API_KEY AI_API_KEY_1 AI_API_KEY_2 AI_API_KEY_3; do
+            value="${!name}"
+            if [ -n "$value" ]; then
+              if [[ "$value" == *$'\n'* || "$value" == *$'\r'* ]]; then
+                echo "$name must be a single line." >&2
+                exit 1
+              fi
+              printf '%s=%s\n' "$name" "$value" >> "$env_file"
+            fi
+          done
           target='useradmin@20.124.93.89'
           ssh_options=(-i "$key_file" -o BatchMode=yes -o IdentitiesOnly=yes -o ConnectTimeout=15 -o StrictHostKeyChecking=yes -o "UserKnownHostsFile=$hosts_file")
           ssh "${ssh_options[@]}" "$target" 'install -d -m 700 "$HOME/akim-ai-backend"'

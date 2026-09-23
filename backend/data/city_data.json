@@ -82,6 +82,7 @@
     {
       "code": "esil",
       "name": "Есиль",
+      "map_anchor": {"latitude": 51.121, "longitude": 71.43, "source": "illustrative_manual_anchor"},
       "population_share": 0.27,
       "profile": "Богатый район, но с пробками на мостах и переполненными школами.",
       "indicators": {
@@ -100,6 +101,7 @@
     {
       "code": "almaty",
       "name": "Алматы",
+      "map_anchor": {"latitude": 51.125, "longitude": 71.505, "source": "illustrative_manual_anchor"},
       "population_share": 0.24,
       "profile": "Старые сети ЖКХ и пробки.",
       "indicators": {
@@ -118,6 +120,7 @@
     {
       "code": "saryarka",
       "name": "Сарыарка",
+      "map_anchor": {"latitude": 51.184, "longitude": 71.421, "source": "illustrative_manual_anchor"},
       "population_share": 0.2,
       "profile": "Смог от частного сектора и слабое озеленение.",
       "indicators": {
@@ -136,6 +139,7 @@
     {
       "code": "baikonur",
       "name": "Байконур",
+      "map_anchor": {"latitude": 51.18, "longitude": 71.35, "source": "illustrative_manual_anchor"},
       "population_share": 0.13,
       "profile": "Средние показатели без ярких перекосов.",
       "indicators": {
@@ -154,6 +158,7 @@
     {
       "code": "nura",
       "name": "Нура",
+      "map_anchor": {"latitude": 51.135, "longitude": 71.34, "source": "illustrative_manual_anchor"},
       "population_share": 0.16,
       "profile": "Аутсайдер по социальной сфере и транспорту.",
       "indicators": {

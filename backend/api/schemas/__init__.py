@@ -1,5 +1,5 @@
 """Request and response schemas."""
 
-from . import simulation
+from . import scenario, simulation
 
-__all__ = ['simulation']
+__all__ = ['scenario', 'simulation']

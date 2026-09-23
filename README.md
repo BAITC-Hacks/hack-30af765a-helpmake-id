@@ -1,487 +1,135 @@
-# Akim for 5 Hours — AI City Management Simulator
+# Akim AI — «Аким на 5 часов»
 
-> HackAlem AI 2026 · Astana Innovations Special Track  
-> **Status:** Hackathon MVP in development
+Backend симулятора управленческих решений для пяти игровых районов Астаны. Все численные результаты рассчитывает детерминированный Simulation Engine. AI выбирает проверенные альтернативы и помогает найти факты для ответа; он не считает Score и не задаёт показатели.
 
-## Overview
+## Что реализовано
 
-**Akim for 5 Hours** is an AI-assisted city-management simulator for exploring how a limited municipal budget can affect quality of life across hypothetical districts of Astana.
+- Один версионированный синтетический датасет, бюджет 100, каталог из 14 мер и проверка ровно пяти решений.
+- Score города и районов, критические показатели, эффекты и синергии, поквартальный ряд Q0–Q8.
+- AI объяснение, рекомендации и вопросы с явным `unavailable` при отсутствии провайдера.
+- Сохранение, список, получение, удаление и сравнение сценариев в устойчивом SQLite файле.
+- Условные точки для пяти игровых районов на карте Астаны.
 
-A user receives the same starting budget and city dataset, makes **exactly five management decisions**, and sees how those decisions change district indicators and the final **Astana Quality of Life Score**.
+Исходные данные и правила находятся в `backend/data/`. Версия датасета — `1.1.0`; `dataset_hash` считается из файлов данных при запуске. Изменение данных требует обновления версии. `GET /api/v1/data` сообщает обе величины.
 
-The product combines two layers:
+## Расчёт
 
-1. **Deterministic simulation engine** — validates the scenario and calculates all numerical effects.
-2. **AI Decision Advisor** — explains the calculated outcome, trade-offs, strengths, risks, and possible improvements.
+Показатели ориентированы одинаково: больше — лучше. Для меры с лагом `L` и горизонтом `H=8` реализованная доля полного эффекта в квартале `q` равна `max(0, q-L)/H`. Для каждого квартала движок заново применяет меры к исходному состоянию, добавляет фиксированную синергию после начала действия обеих мер, ограничивает показатели диапазоном 0–100 и вызывает одну и ту же функцию Score. Поэтому Q8 в `quarters` точно совпадает с итоговыми полями `/simulate`.
 
-**Core principle: the LLM explains the simulation; it does not invent or calculate the score.**
+`Score = 0.7 × средневзвешенный районный Score + 0.3 × Score слабейшего района − число критических пар`. Критическая пара — район и показатель со значением строго ниже 40. Полные правила, стоимость и веса опубликованы в `/data`; описание формулы — в [датасете](docs/district-dataset.md).
 
----
+Невалидный `/simulate` возвращает `200`, `valid:false`, список `violations` и не содержит Score. Ошибки формы запроса возвращают `422`. Поля существующих успешных ответов сохранены; добавлено поле `quarters`.
 
-## Problem
+## API v1
 
-City-development decisions require balancing several areas at the same time:
+| Метод и путь | Назначение |
+| --- | --- |
+| `GET /api/v1/health` | Проверка процесса |
+| `GET /api/v1/ready` | Проверка датасета и хранилища сценариев |
+| `GET /api/v1/data` | Датасет, меры, правила и `map_anchor` |
+| `POST /api/v1/simulate` | Валидация и расчёт, включая Q0–Q8 |
+| `POST /api/v1/advisor/explain` | Качественное объяснение результата |
+| `POST /api/v1/advisor/recommend` | Проверенные замены мер под цель |
+| `POST /api/v1/advisor/ask` | Ответ из фактов результата и каталога |
+| `POST /api/v1/scenarios` | Пересчитать и сохранить сценарий |
+| `GET /api/v1/scenarios` | Список, параметры `limit` и `offset` |
+| `GET /api/v1/scenarios/{id}` | Полный сохранённый результат |
+| `DELETE /api/v1/scenarios/{id}` | Удаление |
+| `POST /api/v1/scenarios/compare` | Сравнение двух сохранённых сценариев |
 
-- transport;
-- greening / environment;
-- social infrastructure;
-- safety;
-- city services.
+Полная схема запросов и ответов: [openapi.json](openapi.json), либо `/openapi.json` и `/docs` у работающего сервера. В решениях используется `district_code`; городская мера передаётся без него или с `null`.
 
-Resources are limited. Improving one area can leave another district or indicator behind. Decision-makers therefore need a way to compare scenarios and understand not only **what score changed**, but **why it changed and what trade-offs were created**.
+### Запрос симуляции
 
----
-
-## User
-
-Primary users defined by the challenge:
-
-- city manager;
-- city analyst;
-- simulator user.
-
-The hackathon MVP is designed as a compact **decision-support simulation**, not as a production municipal information system.
-
----
-
-## Core User Journey
-
-1. Review the baseline condition of five hypothetical city districts.
-2. Receive a fixed virtual budget of **100 units**.
-3. Select **exactly 5 initiatives** from the available catalogue.
-4. Assign a district when an initiative is district-specific.
-5. The validator checks budget, duplicates, category limits, district requirements and incompatible measures.
-6. The simulation engine applies costs, implementation lags, effects and synergies.
-7. The system recalculates district indicators and the **Astana Quality of Life Score**.
-8. The AI Advisor explains the result: strengths, risks, trade-offs and possible next steps.
-9. The user can change the five decisions and compare the new outcome.
-
----
-
-## Challenge Requirements
-
-### Must Have
-
-- [ ] Same virtual budget for every user
-- [ ] Decisions across the five specified urban-development areas
-- [ ] Automatic budget-overrun prevention
-- [ ] AI analysis of selected decisions
-- [ ] Astana Quality of Life Score calculation
-- [ ] Explanation of strengths, risks and possible consequences
-- [ ] Different valid decision sets produce different scores
-
-### Optional / Stretch
-
-- [ ] Comparison of multiple team scenarios
-- [ ] Visualization of district indicator changes
-- [ ] AI recommendations for improving a scenario
-- [ ] Unexpected city events requiring budget reallocation
-- [ ] Automatic short presentation generation
-
----
-
-## Simulation Dataset
-
-The provided hackathon dataset is synthetic and contains no personal or restricted data.
-
-### Districts
-
-| District | Population share | Baseline district score | Main profile |
-|---|---:|---:|---|
-| Esil | 0.27 | 62.99 | Strong overall; congestion and school capacity pressure |
-| Almaty | 0.24 | 57.06 | Aging utilities and congestion |
-| Saryarka | 0.20 | 54.65 | Air pollution and weak greening |
-| Baikonur | 0.13 | 56.63 | Relatively balanced |
-| Nura | 0.16 | 49.18 | Weakest social-infrastructure and transport profile |
-
-### Indicators
-
-Each district has 10 indicators on a 0–100 scale:
-
-| Code | Area | Indicator |
-|---|---|---|
-| T1 | Transport | Road congestion |
-| T2 | Transport | Public transport accessibility |
-| E1 | Environment | Greening |
-| E2 | Environment | Air quality |
-| S1 | Social | Schools and kindergartens |
-| S2 | Social | Clinics and primary healthcare |
-| B1 | Safety | Street safety |
-| B2 | Safety | Road safety |
-| C1 | Services | Utility reliability |
-| C2 | Services | Speed of resolving resident requests |
-
----
-
-## Initiative Catalogue
-
-The simulation currently defines **14 possible measures**.
-
-Examples include:
-
-- dedicated bus lanes;
-- adaptive smart traffic lights;
-- LRT expansion;
-- parks and public green spaces;
-- clean-fuel conversion;
-- city greening;
-- school + kindergarten construction;
-- family health centre;
-- neighbourhood sport hubs;
-- Safe City lighting and cameras;
-- safe crossings and school zones;
-- unified resident-request platform;
-- heat/water network modernization;
-- utility emergency teams and early warning.
-
-Each measure has:
-
-- cost;
-- area;
-- district/city scope;
-- implementation lag;
-- numerical effects on one or more indicators.
-
-The engine also supports defined **synergies** and **incompatibilities** between measures.
-
----
-
-## Scenario Rules
-
-A valid scenario must satisfy all challenge rules:
-
-- budget = **100**;
-- exactly **5 decisions**;
-- no repeated initiative;
-- district must be selected for district-level measures;
-- city-level measures do not take a district;
-- maximum **2 initiatives from the same area**;
-- incompatible measures cannot be selected together;
-- decision order does not affect the result.
-
-Invalid scenarios do not receive a score. The validator returns the reason.
-
----
-
-## Simulation Model
-
-The simulation horizon is **8 quarters (2 conditional years)**.
-
-For an initiative with implementation lag `L`, the realized share of its full effect is:
-
-```text
-realized_effect = (8 - L) / 8
+```json
+{
+  "decisions": [
+    {"measure_id": "M7", "district_code": "nura"},
+    {"measure_id": "M8", "district_code": "nura"},
+    {"measure_id": "M10", "district_code": "nura"},
+    {"measure_id": "M12"},
+    {"measure_id": "M5", "district_code": "saryarka"}
+  ]
+}
 ```
 
-For district `d` and indicator `k`:
+Фрагмент ответа для этого набора: `valid:true`, `spent:95`, `remaining_budget:5`, `baseline_score:52.56`, `score:56.54`, `quarters[0].score:52.56`, `quarters[8].score:56.54`. Каждый квартал содержит Score города, средний балл, слабейший район, критические пары и районные показатели/Score. Полные точные значения возвращает backend.
 
-```text
-I'₍d,k₎ = clip(
-  I₍d,k₎
-  + Σ(measure_effect × realized_effect)
-  + synergies,
-  0,
-  100
-)
+### AI советник
+
+`/advisor/explain` принимает `{"simulation_result": <SimulationSuccess>}`. `/advisor/ask` добавляет `question` длиной от 1 до 1000 символов после удаления пробелов. Пустой, слишком длинный или некорректный вопрос возвращает `422`. AI выбирает идентификаторы подготовленных backend фактов; текст ответа собирается из этих фактов. Поэтому в ответе не появляются придуманные числа или меры.
+
+`/advisor/recommend` принимает рассчитанный результат, `goal` (`transport`, `ecology`, `weakest_district`, `balanced`) и необязательные `constraints`: `max_spent`, `locked_measure_ids`, `excluded_measure_ids`, `target_district_code`. Последний параметр задаёт район для целей `transport`, `ecology` и `weakest_district`; без него первые две цели оцениваются по городу, а последняя — по текущему слабейшему району. Backend перебирает замены одной меры, пропускает каждый набор через Validator и Simulation Engine, а AI выбирает из готовых кандидатов. Backend повторно проверяет выбранные наборы, возвращает их Score и `score_delta` относительно текущего сценария. `tradeoff` составляется из рассчитанных значений. Невалидные наборы не выдаются.
+
+Для всех маршрутов советника неактуальный или изменённый результат даёт `status:"unavailable"`. Без работающего AI API маршруты также возвращают `status:"unavailable"` с причиной; `/simulate`, `/data` и сохранение продолжают работать. Пустой список рекомендаций при `status:"available"` означает, что при заданных ограничениях подходящей замены нет.
+
+### Сценарии и сравнение
+
+`POST /scenarios` принимает `{"name":"План", "decisions":[...]}`. Backend сам пересчитывает сценарий и сохраняет выбранные меры, версию и hash датасета, полный структурированный результат и UTC время создания. Невалидный набор возвращает `422` и не сохраняется. `POST /scenarios/compare` принимает `{"left_id":"<uuid>","right_id":"<uuid>"}` и возвращает разницу правого сценария относительно левого: Score, потраченный и оставшийся бюджет, районные Score и показатели, оставшиеся/появившиеся критические пары. Разная версия **или** hash датасета дают `409`, без молчаливого сравнения.
+
+Сейчас маршруты сценариев общедоступны и список общий для всех пользователей: учётных записей в MVP нет. Не храните там личные данные. По умолчанию список отдаёт 50 записей, максимум 100 за запрос.
+
+## Хранение и миграции
+
+Приложение раньше не использовало БД: Postgres в Compose был необязательным профилем шаблона. Для сценариев выбран SQLite через SQLAlchemy Core: он не требует отдельного сервера и сохраняет данные после перезапуска. Локальный путь по умолчанию — `backend/var/scenarios.sqlite3`; можно задать `SCENARIO_DB_PATH` абсолютным путём. В Docker файл расположен в `/var/lib/akim/scenarios.sqlite3` на именованном volume. Не удаляйте volume при обновлении контейнера.
+
+При первом обращении к `/ready` или сценариям автоматически создаётся начальная схема версии 1 (`schema_version` и `scenarios`). Предыдущих схем и данных для миграции нет. При несовпадении версии схемы приложение отклоняет хранилище и `/ready` возвращает `503`; будущие изменения схемы потребуют отдельной миграции и повышения версии. Команды `make migration`/`make migrate` относятся к неиспользуемому Postgres профилю шаблона и для SQLite сценариев не нужны. Перед ручным изменением версии датасета или схемы сохраните копию файла SQLite либо Docker volume.
+
+## Карта
+
+`/data` связывает каждый `district_code` с названием района и `map_anchor` (`latitude`, `longitude`, `source`). `source:"illustrative_manual_anchor"` означает вручную выбранную условную точку интерфейса. Общее пояснение содержится в `map_anchor_note`. Это пять **игровых** районов с синтетическими показателями; точки дают контекст карты Астаны и не являются центроидами, границами или GIS данными. Тайлы и официальные полигоны backend не загружает.
+
+## Локальный запуск
+
+Нужен Python 3.12 или новее.
+
+```bash
+cd backend
+python3 -m venv .venv
+make install
+make dev
 ```
 
-### Indicator Weights
+Сервер доступен на `http://127.0.0.1:8000`. Для запуска в Docker: `cd backend && docker compose up --build -d`. Compose сохраняет SQLite в `scenarios_data`. `docker compose down` не удаляет данные; `down -v` удалит volume.
 
-| Indicator | T1 | T2 | E1 | E2 | S1 | S2 | B1 | B2 | C1 | C2 |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Weight | .10 | .10 | .09 | .11 | .11 | .11 | .09 | .09 | .10 | .10 |
+`backend/.env.example` — образец переменных для Compose. Для `make dev` экспортируйте нужные переменные в окружение процесса: Uvicorn сам не читает `.env` в этом проекте.
 
-The district score is:
+| Переменная | Назначение |
+| --- | --- |
+| `SCENARIO_DB_PATH` | Необязательный локальный путь SQLite; в Docker задан путь на volume |
+| `CORS_ORIGINS` | Дополнительные разрешённые origin; `https://helpmake-id.live` разрешён всегда |
+| `AI_API_URL` | Полный URL OpenAI совместимого chat completions API |
+| `AI_MODEL` | Имя модели провайдера |
+| `AI_API_KEY` | Один ключ провайдера, если нумерованные ключи не заданы |
+| `AI_API_KEY_1`, `_2`, `_3` | Необязательные ключи по порядку; при 401/402/403/429 пробуется следующий |
+| `AKIM_API_URL` | Только для demo script; адрес запущенного API |
 
-```text
-D_d = Σ(weight_k × indicator'_d,k)
+Ключи и пароли не коммитятся. AI настройка не влияет на численный расчёт. Переменные `AI_API_*` должны быть заданы непосредственно для локального `make dev` либо через `backend/.env` для Compose.
+
+## Полный воспроизводимый demo flow
+
+После запуска сервера выполните в другом терминале:
+
+```bash
+cd backend
+.venv/bin/python scripts/demo_flow.py
 ```
 
-The city average is population-weighted:
+Скрипт последовательно вызывает `/data`, `/simulate`, все три маршрута советника, сохраняет два разных сценария, читает список и один сценарий, сравнивает их и удаляет созданные записи. Он проверяет совпадение Q8 с итогом и выводит версию датасета, бюджет, Score Q0/Q8, статусы AI и разницу сравнения. Без AI ключей статусы советника ожидаемо `unavailable`, остальные шаги выполняются. Записи demo удаляются даже при ошибке после сохранения.
 
-```text
-D_avg = Σ(population_share_d × D_d)
+Проверки проекта:
+
+```bash
+cd backend
+make check
+make test
 ```
 
-### Astana Quality of Life Score
+Тесты покрывают воспроизводимость Score, Q8 и лаги, ограничения валидатора, AI fallback и отбрасывание недопустимых ответов, CRUD сценариев и отказ от сравнения разных датасетов. Порог покрытия — 90%.
 
-```text
-Score = 0.7 × D_avg
-      + 0.3 × min(D_d)
-      - 1.0 × N_crit
-```
+## Ограничения MVP
 
-Where `N_crit` is the number of district × indicator pairs strictly below **40** after all effects.
-
-### Why this matters
-
-The model deliberately rewards both:
-
-- overall city improvement; and
-- improvement of the weakest district.
-
-This prevents a strategy from maximizing already strong districts while leaving critical urban problems unresolved.
-
-**Baseline score without interventions: 52.56.**
-
----
-
-## AI Decision Advisor
-
-The AI layer receives **calculated structured results** from the simulation engine, for example:
-
-- selected initiatives;
-- total cost and remaining budget;
-- baseline and resulting indicators;
-- district deltas;
-- contribution of each measure;
-- triggered synergies;
-- unresolved critical indicators;
-- final score.
-
-The AI then generates a human-readable decision brief.
-
-### AI responsibilities
-
-- explain why the score changed;
-- identify strengths of the scenario;
-- identify remaining risks;
-- describe major trade-offs;
-- explain which districts benefited;
-- compare scenarios;
-- suggest alternative decisions using the available initiative catalogue.
-
-### AI must NOT
-
-- calculate the authoritative score;
-- invent indicator values;
-- change the simulation rules;
-- silently override an invalid scenario;
-- present unsupported claims as dataset facts.
-
-This separation keeps the numerical result **deterministic, reproducible and testable**, while using AI where natural-language reasoning is useful.
-
----
-
-## Smart City Context
-
-The project is informed by the provided **Smart City concept** materials.
-
-The source material frames Smart City around:
-
-- safe and comfortable living conditions;
-- effective city management;
-- transport and logistics;
-- social services;
-- safety;
-- utilities and environment;
-- data-driven city management.
-
-Several initiatives in the simulator map naturally to Smart City concepts such as adaptive traffic management, Safe City, resident-request services, utility monitoring, greening and situation-centre analytics.
-
-### Situation Center Concept
-
-For the MVP, we use the **city situation center** as the main product metaphor:
-
-```text
-City data
-   ↓
-District indicators
-   ↓
-Management decisions
-   ↓
-Simulation Engine
-   ↓
-New city state + Quality of Life Score
-   ↓
-AI Decision Advisor
-```
-
-The long-term direction could connect this decision-simulation layer to richer GIS or digital-twin systems. The hackathon MVP itself does **not** claim to be a full digital twin.
-
----
-
-## Proposed MVP Interface
-
-### Header
-
-- current Astana Quality of Life Score;
-- remaining budget;
-- decisions selected: `0/5`.
-
-### District Overview
-
-A visual overview of the five districts and their key indicators.
-
-### Initiative Panel
-
-Cards for available measures showing:
-
-- category;
-- cost;
-- implementation lag;
-- target scope;
-- expected indicator effects.
-
-### Scenario Panel
-
-The five selected decisions, validation state and total cost.
-
-### Simulation Result
-
-After **Simulate**:
-
-- score before → after;
-- district before → after;
-- indicator deltas;
-- critical indicators;
-- synergies;
-- AI explanation.
-
----
-
-## Architecture
-
-Target MVP architecture:
-
-```text
-┌──────────────────────────────┐
-│          Frontend            │
-│  Districts / Decisions / UI  │
-└──────────────┬───────────────┘
-               │
-               ▼
-┌──────────────────────────────┐
-│           Backend            │
-│ Validation + Scenario API    │
-└──────────────┬───────────────┘
-               │
-       ┌───────┴────────┐
-       ▼                ▼
-┌─────────────┐   ┌──────────────┐
-│ Simulation  │   │ AI Advisor   │
-│   Engine    │   │ LLM / API    │
-│ deterministic│  │ explanation  │
-└──────┬──────┘   └───────┬──────┘
-       │                   │
-       └─────────┬─────────┘
-                 ▼
-        ┌────────────────┐
-        │ Scenario Result│
-        └────────────────┘
-```
-
-The exact implementation stack will be documented as development progresses.
-
----
-
-## Demo Scenario
-
-A demo should answer one question:
-
-> **What happens when an Akim has a limited budget and must choose between competing city needs?**
-
-Suggested flow:
-
-1. Show the city baseline: **52.56**.
-2. Highlight weak district/indicator combinations.
-3. Select five initiatives while staying within budget.
-4. Run the simulation.
-5. Show before/after district and city metrics.
-6. Show the new Quality of Life Score.
-7. Let the AI Advisor explain the result and trade-offs.
-8. Change one decision and demonstrate that the score and explanation change.
-
----
-
-## Evaluation Alignment
-
-The hackathon task defines the following evaluation structure:
-
-| Criterion | Points |
-|---|---:|
-| Task compliance and functionality | 25 |
-| Technical implementation | 25 |
-| README and reproducibility | 25 |
-| Value and applicability | 15 |
-| Development potential and originality | 10 |
-| **Total** | **100** |
-
-This repository is therefore being developed with emphasis on:
-
-- a complete working core flow;
-- deterministic and verifiable calculations;
-- clear separation between simulation and AI;
-- reproducibility;
-- transparent documentation;
-- a concise live demo.
-
----
-
-## Repository Documentation Plan
-
-As implementation progresses, this README will be extended with:
-
-- [ ] exact technology stack;
-- [ ] repository structure;
-- [ ] local installation;
-- [ ] environment variables;
-- [ ] API configuration;
-- [ ] database setup;
-- [ ] run commands;
-- [ ] tests;
-- [ ] deployment instructions;
-- [ ] API examples;
-- [ ] screenshots;
-- [ ] final demo link;
-- [ ] AI / third-party disclosure.
-
----
-
-## AI & Third-Party Disclosure
-
-This project uses AI-assisted development.
-
-Current/prepared tooling may include:
-
-- ChatGPT — product analysis, documentation, prompt engineering and development assistance;
-- Codex — code assistance;
-- OpenAI API — candidate runtime AI provider;
-- NVIDIA API — available hackathon resource; runtime usage will be documented if integrated.
-
-The final README will distinguish between:
-
-- AI-generated code/content;
-- AI-assisted work;
-- third-party libraries/services;
-- code and product decisions implemented directly by the team.
-
----
-
-## Current Status
-
-**Hackathon MVP — active development.**
-
-The current specification, simulation dataset and Smart City reference materials have been analyzed. The immediate objective is to implement the smallest end-to-end flow:
-
-```text
-Baseline → 5 decisions → validation → simulation → score → AI explanation
-```
-
----
-
-## Team
-
-HackAlem AI 2026 hackathon team.
-
-Roles:
-
-- **Product / Prompt Engineering / Documentation**
-- **Backend / Integrations**
-- **Frontend / UX**
-
----
-
-## Disclaimer
-
-This is a **hackathon prototype** using a synthetic dataset and conditional costs/effects. It is intended to demonstrate a city-management decision-simulation approach and should not be interpreted as a production municipal planning system or as a factual forecast of real-world policy outcomes.
+- Показатели, стоимость и Score синтетические: результат не является прогнозом реальной городской политики.
+- AI API нужен для объяснений, выбора рекомендаций и ответов; без него возвращается явный `unavailable`.
+- SQLite рассчитан на один экземпляр backend с одним Uvicorn worker и общим локальным volume; горизонтальное масштабирование потребует внешней БД и миграции.
+- Учётных записей, приватных пользовательских сценариев, полноценного GIS и неожиданных событий пока нет.

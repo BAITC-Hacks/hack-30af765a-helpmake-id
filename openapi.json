@@ -1,0 +1,1942 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Akim AI Simulation API",
+    "version": "1.1.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "summary": "Liveness check",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ready": {
+      "get": {
+        "summary": "Dataset readiness check",
+        "operationId": "ready_api_v1_ready_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadyResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/data": {
+      "get": {
+        "tags": [
+          "Simulation data"
+        ],
+        "summary": "Get the versioned baseline, measure catalog and public rules",
+        "operationId": "get_simulation_data_api_v1_data_get",
+        "responses": {
+          "200": {
+            "description": "Versioned simulation data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DatasetResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/simulate": {
+      "post": {
+        "tags": [
+          "Simulation"
+        ],
+        "summary": "Validate and calculate a five-decision scenario",
+        "operationId": "simulate_scenario_api_v1_simulate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SimulationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Scenario validity and deterministic result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/SimulationSuccess"
+                    },
+                    {
+                      "$ref": "#/components/schemas/SimulationFailure"
+                    }
+                  ],
+                  "title": "Response Simulate Scenario Api V1 Simulate Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/advisor/explain": {
+      "post": {
+        "tags": [
+          "AI advisor"
+        ],
+        "summary": "Explain a calculated simulation result",
+        "operationId": "explain_scenario_api_v1_advisor_explain_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdvisorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Qualitative explanation or explicit unavailable status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/AdvisorAvailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AdvisorUnavailable"
+                    }
+                  ],
+                  "title": "Response Explain Scenario Api V1 Advisor Explain Post",
+                  "discriminator": {
+                    "propertyName": "status",
+                    "mapping": {
+                      "available": "#/components/schemas/AdvisorAvailable",
+                      "unavailable": "#/components/schemas/AdvisorUnavailable"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/advisor/recommend": {
+      "post": {
+        "tags": [
+          "AI advisor"
+        ],
+        "summary": "Recommend validated replacements for a calculated scenario",
+        "operationId": "recommend_scenario_api_v1_advisor_recommend_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecommendationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Validated alternatives or explicit unavailable status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/RecommendationAvailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AdvisorUnavailable"
+                    }
+                  ],
+                  "title": "Response Recommend Scenario Api V1 Advisor Recommend Post",
+                  "discriminator": {
+                    "propertyName": "status",
+                    "mapping": {
+                      "available": "#/components/schemas/RecommendationAvailable",
+                      "unavailable": "#/components/schemas/AdvisorUnavailable"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/advisor/ask": {
+      "post": {
+        "tags": [
+          "AI advisor"
+        ],
+        "summary": "Ask about a calculated scenario and the measure catalog",
+        "operationId": "ask_advisor_api_v1_advisor_ask_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AskRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Grounded qualitative answer or explicit unavailable status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/AskAvailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AdvisorUnavailable"
+                    }
+                  ],
+                  "title": "Response Ask Advisor Api V1 Advisor Ask Post",
+                  "discriminator": {
+                    "propertyName": "status",
+                    "mapping": {
+                      "available": "#/components/schemas/AskAvailable",
+                      "unavailable": "#/components/schemas/AdvisorUnavailable"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scenarios": {
+      "post": {
+        "tags": [
+          "Saved scenarios"
+        ],
+        "summary": "Calculate and save a valid scenario",
+        "operationId": "save_scenario_api_v1_scenarios_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Saved scenario and its calculated result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedScenario"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Saved scenarios"
+        ],
+        "summary": "List saved scenarios",
+        "operationId": "list_scenarios_api_v1_scenarios_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Newest scenarios first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ScenarioSummary"
+                  },
+                  "title": "Response List Scenarios Api V1 Scenarios Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scenarios/compare": {
+      "post": {
+        "tags": [
+          "Saved scenarios"
+        ],
+        "summary": "Compare two saved scenarios from the same dataset",
+        "operationId": "compare_scenarios_api_v1_scenarios_compare_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScenarioCompareRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Score, budget, district and critical-indicator differences",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScenarioComparison"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Scenario not found"
+          },
+          "409": {
+            "description": "Dataset mismatch"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scenarios/{scenario_id}": {
+      "get": {
+        "tags": [
+          "Saved scenarios"
+        ],
+        "summary": "Get a saved scenario and its full result",
+        "operationId": "get_scenario_api_v1_scenarios__scenario_id__get",
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scenario Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saved scenario",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedScenario"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Scenario not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Saved scenarios"
+        ],
+        "summary": "Delete a saved scenario",
+        "operationId": "delete_scenario_api_v1_scenarios__scenario_id__delete",
+        "parameters": [
+          {
+            "name": "scenario_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Scenario Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "Scenario not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ActivatedSynergy": {
+        "properties": {
+          "measures": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Measures"
+          },
+          "district_code": {
+            "type": "string",
+            "title": "District Code"
+          },
+          "indicator": {
+            "type": "string",
+            "title": "Indicator"
+          },
+          "bonus": {
+            "type": "integer",
+            "title": "Bonus"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "measures",
+          "district_code",
+          "indicator",
+          "bonus"
+        ],
+        "title": "ActivatedSynergy"
+      },
+      "AdvisorAvailable": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "available",
+            "title": "Status"
+          },
+          "strengths": {
+            "type": "string",
+            "title": "Strengths"
+          },
+          "weaknesses": {
+            "type": "string",
+            "title": "Weaknesses"
+          },
+          "tradeoffs": {
+            "type": "string",
+            "title": "Tradeoffs"
+          },
+          "remaining_critical_indicators": {
+            "type": "string",
+            "title": "Remaining Critical Indicators"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "strengths",
+          "weaknesses",
+          "tradeoffs",
+          "remaining_critical_indicators"
+        ],
+        "title": "AdvisorAvailable"
+      },
+      "AdvisorRequest": {
+        "properties": {
+          "simulation_result": {
+            "$ref": "#/components/schemas/SimulationSuccess"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "simulation_result"
+        ],
+        "title": "AdvisorRequest"
+      },
+      "AdvisorUnavailable": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "unavailable",
+            "title": "Status"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "reason"
+        ],
+        "title": "AdvisorUnavailable"
+      },
+      "AskAvailable": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "available",
+            "title": "Status"
+          },
+          "answer": {
+            "type": "string",
+            "title": "Answer"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "answer"
+        ],
+        "title": "AskAvailable"
+      },
+      "AskRequest": {
+        "properties": {
+          "simulation_result": {
+            "$ref": "#/components/schemas/SimulationSuccess"
+          },
+          "question": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Question"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "simulation_result",
+          "question"
+        ],
+        "title": "AskRequest"
+      },
+      "CriticalPair": {
+        "properties": {
+          "district_code": {
+            "type": "string",
+            "title": "District Code"
+          },
+          "indicator": {
+            "type": "string",
+            "title": "Indicator"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "district_code",
+          "indicator",
+          "value"
+        ],
+        "title": "CriticalPair"
+      },
+      "DatasetResponse": {
+        "properties": {
+          "version": {
+            "type": "string",
+            "title": "Version"
+          },
+          "dataset_hash": {
+            "type": "string",
+            "title": "Dataset Hash"
+          },
+          "budget": {
+            "type": "integer",
+            "title": "Budget"
+          },
+          "horizon_quarters": {
+            "type": "integer",
+            "title": "Horizon Quarters"
+          },
+          "decisions_required": {
+            "type": "integer",
+            "title": "Decisions Required"
+          },
+          "max_per_direction": {
+            "type": "integer",
+            "title": "Max Per Direction"
+          },
+          "critical_threshold": {
+            "type": "integer",
+            "title": "Critical Threshold"
+          },
+          "map_anchor_note": {
+            "type": "string",
+            "title": "Map Anchor Note"
+          },
+          "directions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Directions"
+          },
+          "indicators": {
+            "items": {
+              "$ref": "#/components/schemas/IndicatorData"
+            },
+            "type": "array",
+            "title": "Indicators"
+          },
+          "districts": {
+            "items": {
+              "$ref": "#/components/schemas/DistrictData"
+            },
+            "type": "array",
+            "title": "Districts"
+          },
+          "measures": {
+            "items": {
+              "$ref": "#/components/schemas/MeasureData"
+            },
+            "type": "array",
+            "title": "Measures"
+          },
+          "synergies": {
+            "items": {
+              "$ref": "#/components/schemas/SynergyRule"
+            },
+            "type": "array",
+            "title": "Synergies"
+          },
+          "incompatibilities": {
+            "items": {
+              "$ref": "#/components/schemas/IncompatibilityRule"
+            },
+            "type": "array",
+            "title": "Incompatibilities"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "version",
+          "dataset_hash",
+          "budget",
+          "horizon_quarters",
+          "decisions_required",
+          "max_per_direction",
+          "critical_threshold",
+          "map_anchor_note",
+          "directions",
+          "indicators",
+          "districts",
+          "measures",
+          "synergies",
+          "incompatibilities"
+        ],
+        "title": "DatasetResponse"
+      },
+      "DecisionInput": {
+        "properties": {
+          "measure_id": {
+            "type": "string",
+            "maxLength": 8,
+            "minLength": 1,
+            "title": "Measure Id"
+          },
+          "district_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "District Code"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "measure_id"
+        ],
+        "title": "DecisionInput"
+      },
+      "DistrictComparison": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "population_share": {
+            "type": "number",
+            "title": "Population Share"
+          },
+          "before": {
+            "$ref": "#/components/schemas/DistrictSnapshot"
+          },
+          "after": {
+            "$ref": "#/components/schemas/DistrictSnapshot"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "population_share",
+          "before",
+          "after"
+        ],
+        "title": "DistrictComparison"
+      },
+      "DistrictData": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "map_anchor": {
+            "$ref": "#/components/schemas/MapAnchor"
+          },
+          "population_share": {
+            "type": "number",
+            "title": "Population Share"
+          },
+          "profile": {
+            "type": "string",
+            "title": "Profile"
+          },
+          "indicators": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Indicators"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "name",
+          "map_anchor",
+          "population_share",
+          "profile",
+          "indicators"
+        ],
+        "title": "DistrictData"
+      },
+      "DistrictDelta": {
+        "properties": {
+          "district_code": {
+            "type": "string",
+            "title": "District Code"
+          },
+          "score_delta": {
+            "type": "number",
+            "title": "Score Delta"
+          },
+          "indicator_deltas": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Indicator Deltas"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "district_code",
+          "score_delta",
+          "indicator_deltas"
+        ],
+        "title": "DistrictDelta"
+      },
+      "DistrictSnapshot": {
+        "properties": {
+          "indicators": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Indicators"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "indicators",
+          "score"
+        ],
+        "title": "DistrictSnapshot"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "HealthResponse"
+      },
+      "IncompatibilityRule": {
+        "properties": {
+          "measures": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Measures"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "global",
+              "same_district"
+            ],
+            "title": "Scope"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "measures",
+          "scope",
+          "description"
+        ],
+        "title": "IncompatibilityRule"
+      },
+      "IndicatorData": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "direction": {
+            "type": "string",
+            "title": "Direction"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "weight": {
+            "type": "number",
+            "title": "Weight"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "direction",
+          "name",
+          "description",
+          "weight"
+        ],
+        "title": "IndicatorData"
+      },
+      "MapAnchor": {
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "title": "Latitude"
+          },
+          "longitude": {
+            "type": "number",
+            "title": "Longitude"
+          },
+          "source": {
+            "type": "string",
+            "const": "illustrative_manual_anchor",
+            "title": "Source"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "latitude",
+          "longitude",
+          "source"
+        ],
+        "title": "MapAnchor"
+      },
+      "MeasureContribution": {
+        "properties": {
+          "measure_id": {
+            "type": "string",
+            "title": "Measure Id"
+          },
+          "district_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "District Code"
+          },
+          "affected_districts": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Affected Districts"
+          },
+          "cost": {
+            "type": "integer",
+            "title": "Cost"
+          },
+          "lag": {
+            "type": "integer",
+            "title": "Lag"
+          },
+          "effect_factor": {
+            "type": "number",
+            "title": "Effect Factor"
+          },
+          "full_effects": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Full Effects"
+          },
+          "applied_effects": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Applied Effects"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "measure_id",
+          "district_code",
+          "affected_districts",
+          "cost",
+          "lag",
+          "effect_factor",
+          "full_effects",
+          "applied_effects"
+        ],
+        "title": "MeasureContribution"
+      },
+      "MeasureData": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "direction": {
+            "type": "string",
+            "title": "Direction"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "district",
+              "city"
+            ],
+            "title": "Scope"
+          },
+          "cost": {
+            "type": "integer",
+            "title": "Cost"
+          },
+          "lag": {
+            "type": "integer",
+            "title": "Lag"
+          },
+          "effects": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Effects"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "direction",
+          "name",
+          "scope",
+          "cost",
+          "lag",
+          "effects"
+        ],
+        "title": "MeasureData"
+      },
+      "QuarterDistrict": {
+        "properties": {
+          "district_code": {
+            "type": "string",
+            "title": "District Code"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "indicators": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Indicators"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "district_code",
+          "score",
+          "indicators"
+        ],
+        "title": "QuarterDistrict"
+      },
+      "QuarterResult": {
+        "properties": {
+          "quarter": {
+            "type": "integer",
+            "title": "Quarter"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "city_average": {
+            "type": "number",
+            "title": "City Average"
+          },
+          "weakest_district": {
+            "type": "string",
+            "title": "Weakest District"
+          },
+          "critical_pairs": {
+            "items": {
+              "$ref": "#/components/schemas/CriticalPair"
+            },
+            "type": "array",
+            "title": "Critical Pairs"
+          },
+          "districts": {
+            "items": {
+              "$ref": "#/components/schemas/QuarterDistrict"
+            },
+            "type": "array",
+            "title": "Districts"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "quarter",
+          "score",
+          "city_average",
+          "weakest_district",
+          "critical_pairs",
+          "districts"
+        ],
+        "title": "QuarterResult"
+      },
+      "ReadyResponse": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status"
+          },
+          "dataset_version": {
+            "type": "string",
+            "title": "Dataset Version"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "dataset_version"
+        ],
+        "title": "ReadyResponse"
+      },
+      "Recommendation": {
+        "properties": {
+          "replaces": {
+            "$ref": "#/components/schemas/DecisionInput"
+          },
+          "with_decision": {
+            "$ref": "#/components/schemas/DecisionInput"
+          },
+          "decisions": {
+            "items": {
+              "$ref": "#/components/schemas/DecisionInput"
+            },
+            "type": "array",
+            "title": "Decisions"
+          },
+          "spent": {
+            "type": "integer",
+            "title": "Spent"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "score_delta": {
+            "type": "number",
+            "title": "Score Delta"
+          },
+          "tradeoff": {
+            "type": "string",
+            "title": "Tradeoff"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "replaces",
+          "with_decision",
+          "decisions",
+          "spent",
+          "score",
+          "score_delta",
+          "tradeoff"
+        ],
+        "title": "Recommendation"
+      },
+      "RecommendationAvailable": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "available",
+            "title": "Status"
+          },
+          "recommendations": {
+            "items": {
+              "$ref": "#/components/schemas/Recommendation"
+            },
+            "type": "array",
+            "title": "Recommendations"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "recommendations"
+        ],
+        "title": "RecommendationAvailable"
+      },
+      "RecommendationConstraints": {
+        "properties": {
+          "max_spent": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Spent"
+          },
+          "locked_measure_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Locked Measure Ids"
+          },
+          "excluded_measure_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 20,
+            "title": "Excluded Measure Ids"
+          },
+          "target_district_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target District Code"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "RecommendationConstraints"
+      },
+      "RecommendationRequest": {
+        "properties": {
+          "simulation_result": {
+            "$ref": "#/components/schemas/SimulationSuccess"
+          },
+          "goal": {
+            "type": "string",
+            "enum": [
+              "transport",
+              "ecology",
+              "weakest_district",
+              "balanced"
+            ],
+            "title": "Goal"
+          },
+          "constraints": {
+            "$ref": "#/components/schemas/RecommendationConstraints"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "simulation_result",
+          "goal"
+        ],
+        "title": "RecommendationRequest"
+      },
+      "SavedScenario": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "dataset_version": {
+            "type": "string",
+            "title": "Dataset Version"
+          },
+          "dataset_hash": {
+            "type": "string",
+            "title": "Dataset Hash"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "spent": {
+            "type": "integer",
+            "title": "Spent"
+          },
+          "budget": {
+            "type": "integer",
+            "title": "Budget"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "decisions": {
+            "items": {
+              "$ref": "#/components/schemas/DecisionInput"
+            },
+            "type": "array",
+            "title": "Decisions"
+          },
+          "result": {
+            "$ref": "#/components/schemas/SimulationSuccess"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "dataset_version",
+          "dataset_hash",
+          "score",
+          "spent",
+          "budget",
+          "created_at",
+          "decisions",
+          "result"
+        ],
+        "title": "SavedScenario"
+      },
+      "ScenarioCompareRequest": {
+        "properties": {
+          "left_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Left Id"
+          },
+          "right_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Right Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "left_id",
+          "right_id"
+        ],
+        "title": "ScenarioCompareRequest"
+      },
+      "ScenarioComparison": {
+        "properties": {
+          "left": {
+            "$ref": "#/components/schemas/ScenarioSummary"
+          },
+          "right": {
+            "$ref": "#/components/schemas/ScenarioSummary"
+          },
+          "dataset_version": {
+            "type": "string",
+            "title": "Dataset Version"
+          },
+          "dataset_hash": {
+            "type": "string",
+            "title": "Dataset Hash"
+          },
+          "score_delta": {
+            "type": "number",
+            "title": "Score Delta"
+          },
+          "spent_delta": {
+            "type": "integer",
+            "title": "Spent Delta"
+          },
+          "remaining_budget_delta": {
+            "type": "integer",
+            "title": "Remaining Budget Delta"
+          },
+          "districts": {
+            "items": {
+              "$ref": "#/components/schemas/DistrictDelta"
+            },
+            "type": "array",
+            "title": "Districts"
+          },
+          "critical_pairs_left": {
+            "items": {
+              "$ref": "#/components/schemas/CriticalPair"
+            },
+            "type": "array",
+            "title": "Critical Pairs Left"
+          },
+          "critical_pairs_right": {
+            "items": {
+              "$ref": "#/components/schemas/CriticalPair"
+            },
+            "type": "array",
+            "title": "Critical Pairs Right"
+          },
+          "resolved_critical_pairs": {
+            "items": {
+              "$ref": "#/components/schemas/CriticalPair"
+            },
+            "type": "array",
+            "title": "Resolved Critical Pairs"
+          },
+          "new_critical_pairs": {
+            "items": {
+              "$ref": "#/components/schemas/CriticalPair"
+            },
+            "type": "array",
+            "title": "New Critical Pairs"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "left",
+          "right",
+          "dataset_version",
+          "dataset_hash",
+          "score_delta",
+          "spent_delta",
+          "remaining_budget_delta",
+          "districts",
+          "critical_pairs_left",
+          "critical_pairs_right",
+          "resolved_critical_pairs",
+          "new_critical_pairs"
+        ],
+        "title": "ScenarioComparison"
+      },
+      "ScenarioCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "decisions": {
+            "items": {
+              "$ref": "#/components/schemas/DecisionInput"
+            },
+            "type": "array",
+            "title": "Decisions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "name",
+          "decisions"
+        ],
+        "title": "ScenarioCreate"
+      },
+      "ScenarioSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "dataset_version": {
+            "type": "string",
+            "title": "Dataset Version"
+          },
+          "dataset_hash": {
+            "type": "string",
+            "title": "Dataset Hash"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "spent": {
+            "type": "integer",
+            "title": "Spent"
+          },
+          "budget": {
+            "type": "integer",
+            "title": "Budget"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "dataset_version",
+          "dataset_hash",
+          "score",
+          "spent",
+          "budget",
+          "created_at"
+        ],
+        "title": "ScenarioSummary"
+      },
+      "SimulationFailure": {
+        "properties": {
+          "dataset_version": {
+            "type": "string",
+            "title": "Dataset Version"
+          },
+          "dataset_hash": {
+            "type": "string",
+            "title": "Dataset Hash"
+          },
+          "budget": {
+            "type": "integer",
+            "title": "Budget"
+          },
+          "spent": {
+            "type": "integer",
+            "title": "Spent"
+          },
+          "remaining_budget": {
+            "type": "integer",
+            "title": "Remaining Budget"
+          },
+          "decisions": {
+            "items": {
+              "$ref": "#/components/schemas/DecisionInput"
+            },
+            "type": "array",
+            "title": "Decisions"
+          },
+          "valid": {
+            "type": "boolean",
+            "const": false,
+            "title": "Valid"
+          },
+          "violations": {
+            "items": {
+              "$ref": "#/components/schemas/Violation"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Violations"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "dataset_version",
+          "dataset_hash",
+          "budget",
+          "spent",
+          "remaining_budget",
+          "decisions",
+          "valid",
+          "violations"
+        ],
+        "title": "SimulationFailure"
+      },
+      "SimulationRequest": {
+        "properties": {
+          "decisions": {
+            "items": {
+              "$ref": "#/components/schemas/DecisionInput"
+            },
+            "type": "array",
+            "title": "Decisions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "decisions"
+        ],
+        "title": "SimulationRequest"
+      },
+      "SimulationSuccess": {
+        "properties": {
+          "dataset_version": {
+            "type": "string",
+            "title": "Dataset Version"
+          },
+          "dataset_hash": {
+            "type": "string",
+            "title": "Dataset Hash"
+          },
+          "budget": {
+            "type": "integer",
+            "title": "Budget"
+          },
+          "spent": {
+            "type": "integer",
+            "title": "Spent"
+          },
+          "remaining_budget": {
+            "type": "integer",
+            "title": "Remaining Budget"
+          },
+          "decisions": {
+            "items": {
+              "$ref": "#/components/schemas/DecisionInput"
+            },
+            "type": "array",
+            "title": "Decisions"
+          },
+          "valid": {
+            "type": "boolean",
+            "const": true,
+            "title": "Valid"
+          },
+          "violations": {
+            "items": {
+              "$ref": "#/components/schemas/Violation"
+            },
+            "type": "array",
+            "maxItems": 0,
+            "title": "Violations"
+          },
+          "baseline_score": {
+            "type": "number",
+            "title": "Baseline Score"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          },
+          "score_delta": {
+            "type": "number",
+            "title": "Score Delta"
+          },
+          "city_average_before": {
+            "type": "number",
+            "title": "City Average Before"
+          },
+          "city_average_after": {
+            "type": "number",
+            "title": "City Average After"
+          },
+          "critical_pairs_before": {
+            "items": {
+              "$ref": "#/components/schemas/CriticalPair"
+            },
+            "type": "array",
+            "title": "Critical Pairs Before"
+          },
+          "critical_pairs_after": {
+            "items": {
+              "$ref": "#/components/schemas/CriticalPair"
+            },
+            "type": "array",
+            "title": "Critical Pairs After"
+          },
+          "weakest_district_before": {
+            "type": "string",
+            "title": "Weakest District Before"
+          },
+          "weakest_district_after": {
+            "type": "string",
+            "title": "Weakest District After"
+          },
+          "districts": {
+            "items": {
+              "$ref": "#/components/schemas/DistrictComparison"
+            },
+            "type": "array",
+            "title": "Districts"
+          },
+          "measure_contributions": {
+            "items": {
+              "$ref": "#/components/schemas/MeasureContribution"
+            },
+            "type": "array",
+            "title": "Measure Contributions"
+          },
+          "activated_synergies": {
+            "items": {
+              "$ref": "#/components/schemas/ActivatedSynergy"
+            },
+            "type": "array",
+            "title": "Activated Synergies"
+          },
+          "quarters": {
+            "items": {
+              "$ref": "#/components/schemas/QuarterResult"
+            },
+            "type": "array",
+            "title": "Quarters"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "dataset_version",
+          "dataset_hash",
+          "budget",
+          "spent",
+          "remaining_budget",
+          "decisions",
+          "valid",
+          "violations",
+          "baseline_score",
+          "score",
+          "score_delta",
+          "city_average_before",
+          "city_average_after",
+          "critical_pairs_before",
+          "critical_pairs_after",
+          "weakest_district_before",
+          "weakest_district_after",
+          "districts",
+          "measure_contributions",
+          "activated_synergies"
+        ],
+        "title": "SimulationSuccess"
+      },
+      "SynergyRule": {
+        "properties": {
+          "measures": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Measures"
+          },
+          "indicator": {
+            "type": "string",
+            "title": "Indicator"
+          },
+          "bonus": {
+            "type": "integer",
+            "title": "Bonus"
+          },
+          "district_from": {
+            "type": "string",
+            "title": "District From"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "measures",
+          "indicator",
+          "bonus",
+          "district_from"
+        ],
+        "title": "SynergyRule"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "Violation": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "Violation"
+      }
+    }
+  }
+}

@@ -28,6 +28,12 @@ def load_dataset() -> dict:
             raise ValueError('Indicator weights must sum to one')
         if len({d['code'] for d in city['districts']}) != len(city['districts']):
             raise ValueError('District codes must be unique')
+        if any(
+            not -90 <= district['map_anchor']['latitude'] <= 90
+            or not -180 <= district['map_anchor']['longitude'] <= 180
+            for district in city['districts']
+        ):
+            raise ValueError('District map anchors must be valid coordinates')
         if len({m['id'] for m in measures['measures']}) != len(measures['measures']):
             raise ValueError('Measure IDs must be unique')
         _dataset = {**city, **measures, **rules, 'dataset_hash': digest.hexdigest()}

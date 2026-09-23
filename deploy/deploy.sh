@@ -60,6 +60,7 @@ docker run -d \
   --name "$container" \
   --restart unless-stopped \
   --env-file "$deployment_dir/deploy.env" \
+  --mount type=volume,src=akim-scenarios,dst=/var/lib/akim \
   --publish 127.0.0.1:8010:8000 \
   --health-cmd='python -c "import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8000/api/v1/ready\", timeout=5)"' \
   --health-interval=10s \

@@ -34,15 +34,15 @@ test:
 	$(PYTEST) tests/ -v
 
 lint:
-	$(RUFF) check api/ tests/
+	$(RUFF) check api/ tests/ scripts/
 
 format:
-	$(RUFF) format api/ tests/
-	$(RUFF) check --fix api/ tests/
+	$(RUFF) format api/ tests/ scripts/
+	$(RUFF) check --fix api/ tests/ scripts/
 
 check:
-	$(RUFF) format --check api/ tests/
-	$(RUFF) check api/ tests/
+	$(RUFF) format --check api/ tests/ scripts/
+	$(RUFF) check api/ tests/ scripts/
 
 migration:
 	@if [ -z "$(M)" ]; then echo "Usage: make migration M=\"description\""; exit 1; fi

@@ -59,6 +59,35 @@ def test_example_and_order_independence():
     assert result == simulation.simulate(EXAMPLE)
 
 
+def test_quarters_reuse_the_final_simulation_and_respect_lags():
+    result = simulation.simulate(EXAMPLE)
+    quarters = result['quarters']
+    assert [item['quarter'] for item in quarters] == list(range(9))
+    assert quarters[0]['score'] == result['baseline_score']
+    assert quarters[8]['score'] == result['score']
+    assert quarters[8]['city_average'] == result['city_average_after']
+    assert quarters[8]['critical_pairs'] == result['critical_pairs_after']
+    for district in result['districts']:
+        code = district['code']
+        initial = next(
+            item for item in quarters[0]['districts'] if item['district_code'] == code
+        )
+        final = next(
+            item for item in quarters[8]['districts'] if item['district_code'] == code
+        )
+        assert initial == {'district_code': code, **district['before']}
+        assert final == {'district_code': code, **district['after']}
+    nura_q3 = next(
+        item for item in quarters[3]['districts'] if item['district_code'] == 'nura'
+    )
+    assert nura_q3['indicators']['S1'] == 38
+    nura_q4 = next(
+        item for item in quarters[4]['districts'] if item['district_code'] == 'nura'
+    )
+    assert nura_q4['indicators']['S1'] > 38
+    assert quarters == simulation.simulate(list(reversed(EXAMPLE)))['quarters']
+
+
 @pytest.mark.parametrize(
     ('decisions', 'expected'),
     [
@@ -156,6 +185,13 @@ def test_negative_effect_and_synergies():
     assert nura['after']['indicators']['T1'] == pytest.approx(
         55 + 6 * 0.75 + 4 * 0.75 + 2 - 2 * 0.875
     )
+    q2_nura = next(
+        item for item in result['quarters'][2]['districts'] if item['district_code'] == 'nura'
+    )
+    q3_nura = next(
+        item for item in result['quarters'][3]['districts'] if item['district_code'] == 'nura'
+    )
+    assert q3_nura['indicators']['T1'] - q2_nura['indicators']['T1'] == pytest.approx(3)
 
 
 def test_clipping_and_strict_critical_threshold(monkeypatch):

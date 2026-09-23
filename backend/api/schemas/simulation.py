@@ -41,9 +41,16 @@ class IndicatorData(APIModel):
     weight: float
 
 
+class MapAnchor(APIModel):
+    latitude: float
+    longitude: float
+    source: typing.Literal['illustrative_manual_anchor']
+
+
 class DistrictData(APIModel):
     code: str
     name: str
+    map_anchor: MapAnchor
     population_share: float
     profile: str
     indicators: dict[str, int]
@@ -80,6 +87,7 @@ class DatasetResponse(APIModel):
     decisions_required: int
     max_per_direction: int
     critical_threshold: int
+    map_anchor_note: str
     directions: list[str]
     indicators: list[IndicatorData]
     districts: list[DistrictData]
@@ -130,6 +138,21 @@ class ActivatedSynergy(APIModel):
     bonus: int
 
 
+class QuarterDistrict(APIModel):
+    district_code: str
+    score: float
+    indicators: dict[str, float]
+
+
+class QuarterResult(APIModel):
+    quarter: int
+    score: float
+    city_average: float
+    weakest_district: str
+    critical_pairs: list[CriticalPair]
+    districts: list[QuarterDistrict]
+
+
 class SimulationResultBase(APIModel):
     dataset_version: str
     dataset_hash: str
@@ -154,6 +177,7 @@ class SimulationSuccess(SimulationResultBase):
     districts: list[DistrictComparison]
     measure_contributions: list[MeasureContribution]
     activated_synergies: list[ActivatedSynergy]
+    quarters: list[QuarterResult] = pydantic.Field(default_factory=list)
 
 
 class SimulationFailure(SimulationResultBase):
@@ -183,5 +207,67 @@ class AdvisorUnavailable(APIModel):
 
 AdvisorResponse = typing.Annotated[
     AdvisorAvailable | AdvisorUnavailable,
+    pydantic.Field(discriminator='status'),
+]
+
+
+class RecommendationConstraints(APIModel):
+    max_spent: typing.Annotated[int, pydantic.Field(strict=True, ge=0)] | None = None
+    locked_measure_ids: list[str] = pydantic.Field(default_factory=list, max_length=20)
+    excluded_measure_ids: list[str] = pydantic.Field(default_factory=list, max_length=20)
+    target_district_code: (
+        typing.Annotated[
+            str, pydantic.StringConstraints(strict=True, min_length=1, max_length=32)
+        ]
+        | None
+    ) = None
+
+
+class RecommendationRequest(APIModel):
+    simulation_result: SimulationSuccess
+    goal: typing.Literal['transport', 'ecology', 'weakest_district', 'balanced']
+    constraints: RecommendationConstraints = pydantic.Field(
+        default_factory=RecommendationConstraints
+    )
+
+
+class Recommendation(APIModel):
+    replaces: DecisionInput
+    with_decision: DecisionInput
+    decisions: list[DecisionInput]
+    spent: int
+    score: float
+    score_delta: float
+    tradeoff: str
+
+
+class RecommendationAvailable(APIModel):
+    status: typing.Literal['available']
+    recommendations: list[Recommendation]
+
+
+RecommendationResponse = typing.Annotated[
+    RecommendationAvailable | AdvisorUnavailable,
+    pydantic.Field(discriminator='status'),
+]
+
+
+class AskRequest(APIModel):
+    simulation_result: SimulationSuccess
+    question: typing.Annotated[
+        str,
+        pydantic.StringConstraints(
+            strict=True, strip_whitespace=True, min_length=1, max_length=1000
+        ),
+    ]
+
+
+class AskAvailable(APIModel):
+    status: typing.Literal['available']
+    answer: str
+
+
+AskResponse = typing.Annotated[
+    AskAvailable | AdvisorUnavailable,
     pydantic.Field(discriminator='status'),
 ]

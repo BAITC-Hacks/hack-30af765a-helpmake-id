@@ -10,9 +10,11 @@ COPY data/ ./data/
 RUN pip install --no-cache-dir .
 
 # Non-root user for production safety
-RUN addgroup --system app && adduser --system --group app
+RUN addgroup --system app && adduser --system --group app \
+    && mkdir -p /var/lib/akim && chown app:app /var/lib/akim
+ENV SCENARIO_DB_PATH=/var/lib/akim/scenarios.sqlite3
 USER app
 
 EXPOSE 8000
 
-CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+CMD ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]

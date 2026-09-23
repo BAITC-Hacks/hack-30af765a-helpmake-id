@@ -14,7 +14,7 @@ from pathlib import Path
 from PIL import Image
 from playwright.async_api import async_playwright
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'docs' / 'media'
 SITE = 'https://helpmake-id.live/'
 SCENARIO = [('M7', 'nura'), ('M8', 'nura'), ('M10', 'nura'), ('M12', None), ('M5', 'saryarka')]
@@ -132,7 +132,7 @@ async def main():
         'assets': {name: {'bytes': (OUT/name).stat().st_size, 'sha256': hashlib.sha256((OUT/name).read_bytes()).hexdigest()} for name in files},
     }
     (OUT/'capture.json').write_text(json.dumps(metadata, ensure_ascii=False, indent=2), encoding='utf-8')
-    (OUT/'README.md').write_text('# Медиа для README\n\nКаждый PNG и GIF — отдельный файл. Они сняты с работающего сайта https://helpmake-id.live/, а не нарисованы генератором изображений.\n\nGIF собраны из последовательных реальных экранов, длительность показа сокращена для README. Значения в интерфейсе не редактируются.\n\nИсточник, время, сценарий, статус AI и контрольные суммы: [capture.json](capture.json). Состояние приложения может отличаться от ранее присланной записи с iPad, поскольку это новая съёмка сайта.\n\nПовторная съёмка: workflow «README media — live capture». Он не меняет код приложения и обновляет README только после успешного создания всех файлов.\n', encoding='utf-8')
+    (OUT/'README.md').write_text('# Медиа для README\n\nКаждый PNG и GIF — отдельный файл. Они сняты с работающего сайта https://helpmake-id.live/, а не нарисованы генератором изображений.\n\nGIF собраны из последовательных реальных экранов, длительность показа сокращена для README. Значения в интерфейсе не редактируются.\n\nИсточник, время, сценарий, статус AI и контрольные суммы: [capture.json](capture.json). Состояние приложения может отличаться от ранее присланной записи с iPad, поскольку это новая съёмка сайта.\n\nПовторная съёмка вручную: `python scripts/capture-readme-media.py`. Скрипт обновляет README только после успешного создания всех файлов.\n', encoding='utf-8')
     for name in files:
         with Image.open(OUT/name) as im:
             im.verify()

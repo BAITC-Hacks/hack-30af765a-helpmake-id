@@ -236,7 +236,6 @@ Score = 0.7 × D_avg
 - pytest / pytest-cov
 - Ruff
 - Docker / Docker Compose
-- GitHub Actions
 - Nginx
 
 ---
@@ -250,7 +249,6 @@ Score = 0.7 × D_avg
 ├── docs/                  # ТЗ, dataset, AI contract, architecture
 ├── design/                # UI/UX design materials
 ├── deploy/                # Deployment scripts/config examples
-├── .github/workflows/     # CI/CD and AI-provider verification
 ├── openapi.json           # API schema
 └── README.md
 ```
@@ -390,7 +388,7 @@ cd backend
 | SQLAlchemy Core / asyncpg | Доступ к PostgreSQL |
 | PostgreSQL / Alembic | Хранение сценариев и миграции |
 | pytest / Ruff | Тестирование и качество кода |
-| Docker / GitHub Actions | Сборка, CI/CD и deployment |
+| Docker / Nginx | Сборка и deployment |
 | HackAlem synthetic dataset | Источник данных и правил симуляции |
 | Smart City materials | Предметный контекст и продуктовый reference |
 | Figma | UI/UX design |
@@ -404,7 +402,7 @@ AI-assisted разработка не меняет принцип источни
 | Участник | Роль | Основной вклад |
 | --- | --- | --- |
 | **Ануар** | Product / AI Logic / Documentation | Product concept, scope, AI Advisor contract, README, product/AI QA, demo и pitch |
-| **Дамир** | Backend / AI / Infrastructure | Dataset, Validator, Simulation Engine, Score, API, AI integration, PostgreSQL, tests, CI/CD и deployment |
+| **Дамир** | Backend / AI / Infrastructure | Dataset, Validator, Simulation Engine, Score, API, AI integration, PostgreSQL, tests и deployment |
 | **Дарья** | Frontend / UX | Situation Center, React frontend, визуализация, API integration, UI/UX |
 
 Git history репозитория отражает вклад участников отдельными содержательными коммитами.

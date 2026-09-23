@@ -26,7 +26,7 @@ After a successful simulation, optionally enter a name and choose **Сохран
 
 On the result page, **AI Advisor · проверенные альтернативы** calls `POST /api/v1/advisor/recommend` with a goal, optional district and spending limit. Each returned replacement includes a backend Score, cost and tradeoff. **Применить и пересчитать** sends the proposed decisions to `POST /api/v1/simulate` before displaying a new result; an unavailable advisor never hides the original numeric result.
 
-Run `npm run build` to check TypeScript and the production bundle. The frontend workflow builds with `VITE_API_BASE_URL=https://api.helpmake-id.live` and publishes the static files to `https://helpmake-id.live` after a push to `main`. The server deployment matches the existing live `index.html` to its document root and replaces that file after uploading the new hashed assets. GitHub Actions uses the same production SSH secrets as the backend workflow.
+Run `npm run build` to check TypeScript and the production bundle. For the public site, the [deployment guide](../docs/deployment.md) builds the Docker image with `VITE_API_BASE_URL=https://api.helpmake-id.live` and serves it through nginx at `https://helpmake-id.live`.
 
 `/data` has no baseline city or district Score. To show the initial city Score, the frontend makes one valid service simulation derived from the current catalog and displays only its `baseline_score`. If that request fails, it shows `—` until the user's scenario is calculated. Initial district cards therefore display raw indicator values, not a locally calculated Score. District scores appear after simulation. `map_anchor` gives illustrative points only; the map is explicitly schematic and does not draw administrative boundaries or use invented coordinates.
 

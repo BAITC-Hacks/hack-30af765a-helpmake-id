@@ -1,0 +1,12 @@
+export type Decision = { measure_id: string; district_code?: string }
+export type Indicator = { id: string; direction: string; name: string; description: string; weight: number }
+export type District = { code: string; name: string; profile: string; population_share: number; map_anchor: { latitude: number; longitude: number; source: string }; indicators: Record<string, number> }
+export type Measure = { id: string; name: string; direction: string; scope: 'district' | 'city'; cost: number; lag: number; effects: Record<string, number> }
+export type DataSet = { version: string; dataset_hash: string; budget: number; decisions_required: number; max_per_direction: number; critical_threshold: number; horizon_quarters: number; map_anchor_note: string; directions: string[]; indicators: Indicator[]; districts: District[]; measures: Measure[]; incompatibilities: { measures: string[]; scope: 'global' | 'same_district'; description: string }[] }
+export type CriticalPair = { district_code: string; indicator: string; value: number }
+export type Snapshot = { score: number; indicators: Record<string, number> }
+export type DistrictResult = { code: string; name: string; before: Snapshot; after: Snapshot }
+export type Quarter = { quarter: number; score: number; city_average: number; weakest_district: string; critical_pairs: CriticalPair[]; districts: { district_code: string; score: number; indicators: Record<string, number> }[] }
+export type SimulationSuccess = { valid: true; dataset_version: string; dataset_hash: string; budget: number; spent: number; remaining_budget: number; decisions: Decision[]; violations: []; baseline_score: number; score: number; score_delta: number; city_average_before: number; city_average_after: number; critical_pairs_before: CriticalPair[]; critical_pairs_after: CriticalPair[]; weakest_district_before: string; weakest_district_after: string; districts: DistrictResult[]; measure_contributions: unknown[]; activated_synergies: unknown[]; quarters: Quarter[] }
+export type SimulationFailure = { valid: false; violations: { code: string; message: string }[] }
+export type Advisor = { status: 'available'; strengths: string; weaknesses: string; tradeoffs: string; remaining_critical_indicators: string } | { status: 'unavailable'; reason: string }

@@ -1,43 +1,39 @@
+"""Public contracts for the stateless Akim simulation API."""
+
 import typing
 
 import pydantic
 
 
-class DecisionInput(pydantic.BaseModel):
-    measure_id: typing.Annotated[
-        str,
-        pydantic.StringConstraints(
-            strict=True,
-            min_length=2,
-            max_length=8,
-        ),
-    ]
-    district_id: typing.Annotated[
-        str,
-        pydantic.StringConstraints(
-            strict=True,
-            min_length=1,
-            max_length=32,
-        ),
-    ] | None = None
-
+class APIModel(pydantic.BaseModel):
     model_config = pydantic.ConfigDict(extra='forbid')
 
 
-class SimulationRequest(pydantic.BaseModel):
+class HealthResponse(APIModel):
+    status: typing.Literal['ok']
+
+
+class ReadyResponse(HealthResponse):
+    dataset_version: str
+
+
+class DecisionInput(APIModel):
+    measure_id: typing.Annotated[
+        str, pydantic.StringConstraints(strict=True, min_length=1, max_length=8)
+    ]
+    district_code: (
+        typing.Annotated[
+            str, pydantic.StringConstraints(strict=True, min_length=1, max_length=32)
+        ]
+        | None
+    ) = None
+
+
+class SimulationRequest(APIModel):
     decisions: list[DecisionInput]
 
-    model_config = pydantic.ConfigDict(extra='forbid')
 
-    @pydantic.field_validator('decisions')
-    @classmethod
-    def require_five_decisions(cls, value: list[DecisionInput]) -> list[DecisionInput]:
-        if len(value) != 5:
-            raise ValueError('Ровно 5 решений обязательны.')
-        return value
-
-
-class IndicatorData(pydantic.BaseModel):
+class IndicatorData(APIModel):
     id: str
     direction: str
     name: str
@@ -45,108 +41,147 @@ class IndicatorData(pydantic.BaseModel):
     weight: float
 
 
-class DistrictData(pydantic.BaseModel):
-    id: str
+class DistrictData(APIModel):
+    code: str
+    name: str
     population_share: float
     profile: str
     indicators: dict[str, int]
-    expected_score: float
 
 
-class MeasureData(pydantic.BaseModel):
+class MeasureData(APIModel):
     id: str
     direction: str
     name: str
-    type: typing.Literal['Район', 'Город']
+    scope: typing.Literal['district', 'city']
     cost: int
     lag: int
     effects: dict[str, int]
 
 
-class SynergyData(pydantic.BaseModel):
+class SynergyRule(APIModel):
     measures: list[str]
     indicator: str
     bonus: int
     district_from: str
 
 
-class IncompatibilityData(pydantic.BaseModel):
+class IncompatibilityRule(APIModel):
     measures: list[str]
     scope: typing.Literal['global', 'same_district']
     description: str
 
 
-class SimulationDataResponse(pydantic.BaseModel):
+class DatasetResponse(APIModel):
+    version: str
+    dataset_hash: str
     budget: int
     horizon_quarters: int
+    decisions_required: int
+    max_per_direction: int
+    critical_threshold: int
     directions: list[str]
     indicators: list[IndicatorData]
     districts: list[DistrictData]
     measures: list[MeasureData]
-    synergies: list[SynergyData]
-    incompatibilities: list[IncompatibilityData]
+    synergies: list[SynergyRule]
+    incompatibilities: list[IncompatibilityRule]
 
 
-class IndicatorEffect(pydantic.BaseModel):
+class Violation(APIModel):
+    code: str
+    message: str
+
+
+class CriticalPair(APIModel):
+    district_code: str
     indicator: str
-    full_effect: float
-    applied_effect: float
+    value: float
 
 
-class MeasureContribution(pydantic.BaseModel):
-    measure_id: str
-    name: str
-    direction: str
-    type: typing.Literal['Район', 'Город']
-    district_id: str | None
-    affected_districts: list[str]
-    cost: int
-    lag: int
-    effect_factor: float
-    indicator_effects: list[IndicatorEffect]
-
-
-class SynergyApplied(pydantic.BaseModel):
-    measures: list[str]
-    indicator: str
-    bonus: float
-    district_id: str
-
-
-class DistrictSnapshot(pydantic.BaseModel):
-    district_id: str
-    population_share: float
+class DistrictSnapshot(APIModel):
     indicators: dict[str, float]
-    district_score: float
+    score: float
 
 
-class DistrictComparison(pydantic.BaseModel):
-    district_id: str
+class DistrictComparison(APIModel):
+    code: str
+    name: str
+    population_share: float
     before: DistrictSnapshot
     after: DistrictSnapshot
 
 
-class Explanation(pydantic.BaseModel):
-    status: typing.Literal['available', 'unavailable']
-    text: str | None = None
-    reason: str | None = None
+class MeasureContribution(APIModel):
+    measure_id: str
+    district_code: str | None
+    affected_districts: list[str]
+    cost: int
+    lag: int
+    effect_factor: float
+    full_effects: dict[str, int]
+    applied_effects: dict[str, float]
 
 
-class SimulationResponse(pydantic.BaseModel):
-    decisions: list[DecisionInput]
+class ActivatedSynergy(APIModel):
+    measures: list[str]
+    district_code: str
+    indicator: str
+    bonus: int
+
+
+class SimulationResultBase(APIModel):
+    dataset_version: str
+    dataset_hash: str
     budget: int
     spent: int
     remaining_budget: int
-    score: float
+    decisions: list[DecisionInput]
+
+
+class SimulationSuccess(SimulationResultBase):
+    valid: typing.Literal[True]
+    violations: typing.Annotated[list[Violation], pydantic.Field(max_length=0)]
     baseline_score: float
+    score: float
     score_delta: float
-    city_score_before: float
-    city_score_after: float
-    weakest_district_score_before: float
-    weakest_district_score_after: float
-    critical_pairs_before: int
-    critical_pairs_after: int
+    city_average_before: float
+    city_average_after: float
+    critical_pairs_before: list[CriticalPair]
+    critical_pairs_after: list[CriticalPair]
+    weakest_district_before: str
+    weakest_district_after: str
     districts: list[DistrictComparison]
     measure_contributions: list[MeasureContribution]
-    activated_synergies: list[SynergyApplied]
-    ai_explanation: Explanation
+    activated_synergies: list[ActivatedSynergy]
+
+
+class SimulationFailure(SimulationResultBase):
+    valid: typing.Literal[False]
+    violations: typing.Annotated[list[Violation], pydantic.Field(min_length=1)]
+
+
+SimulationResponse = SimulationSuccess | SimulationFailure
+
+
+class AdvisorRequest(APIModel):
+    simulation_result: SimulationSuccess
+
+
+class AdvisorAvailable(APIModel):
+    status: typing.Literal['available']
+    strengths: str
+    weaknesses: str
+    tradeoffs: str
+    remaining_critical_indicators: str
+
+
+class AdvisorUnavailable(APIModel):
+    status: typing.Literal['unavailable']
+    reason: str
+
+
+AdvisorResponse = typing.Annotated[
+    AdvisorAvailable | AdvisorUnavailable,
+    pydantic.Field(discriminator='status'),
+]

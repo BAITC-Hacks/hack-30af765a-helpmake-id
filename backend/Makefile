@@ -4,6 +4,7 @@ UVICORN := .venv/bin/uvicorn
 PYTEST := .venv/bin/pytest
 RUFF := .venv/bin/ruff
 ALEMBIC := .venv/bin/alembic
+COMPOSE := $(shell docker compose version >/dev/null 2>&1 && echo 'docker compose' || echo docker-compose)
 
 .DEFAULT_GOAL := help
 
@@ -27,21 +28,21 @@ install:
 	$(PIP) install -e ".[dev]"
 
 dev:
-	$(UVICORN) src.main:app --reload --host 0.0.0.0 --port 8000
+	$(UVICORN) api.main:app --reload --host 0.0.0.0 --port 8000
 
 test:
 	$(PYTEST) tests/ -v
 
 lint:
-	$(RUFF) check src/ tests/
+	$(RUFF) check api/ tests/
 
 format:
-	$(RUFF) format src/ tests/
-	$(RUFF) check --fix src/ tests/
+	$(RUFF) format api/ tests/
+	$(RUFF) check --fix api/ tests/
 
 check:
-	$(RUFF) format --check src/ tests/
-	$(RUFF) check src/ tests/
+	$(RUFF) format --check api/ tests/
+	$(RUFF) check api/ tests/
 
 migration:
 	@if [ -z "$(M)" ]; then echo "Usage: make migration M=\"description\""; exit 1; fi
@@ -52,10 +53,10 @@ migrate:
 
 # Docker helpers
 up:
-	docker compose up --build -d
+	$(COMPOSE) up --build -d
 
 down:
-	docker compose down
+	$(COMPOSE) down
 
 logs:
-	docker compose logs -f
+	$(COMPOSE) logs -f

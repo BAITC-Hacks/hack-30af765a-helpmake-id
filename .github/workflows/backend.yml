@@ -13,6 +13,22 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      DATABASE_URL: postgresql+asyncpg://akim:ci-local-only@127.0.0.1:5432/akim
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: akim
+          POSTGRES_PASSWORD: ci-local-only
+          POSTGRES_DB: akim
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U akim -d akim"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -28,6 +44,9 @@ jobs:
       - name: Lint and format check
         working-directory: backend
         run: make check
+      - name: Apply PostgreSQL migrations
+        working-directory: backend
+        run: make migrate
       - name: Tests and coverage
         working-directory: backend
         run: make test
@@ -91,6 +110,7 @@ jobs:
           AI_API_KEY_1: ${{ secrets.AI_API_KEY_1 }}
           AI_API_KEY_2: ${{ secrets.AI_API_KEY_2 }}
           AI_API_KEY_3: ${{ secrets.AI_API_KEY_3 }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
         run: |
           set -euo pipefail
           if [ -z "$DEPLOY_SSH_KEY" ] || [ -z "$DEPLOY_KNOWN_HOSTS" ]; then
@@ -109,7 +129,7 @@ jobs:
           else
             printf 'CORS_ORIGINS=https://helpmake-id.live\n' > "$env_file"
           fi
-          for name in AI_API_URL AI_MODEL AI_API_KEY AI_API_KEY_1 AI_API_KEY_2 AI_API_KEY_3; do
+          for name in AI_API_URL AI_MODEL AI_API_KEY AI_API_KEY_1 AI_API_KEY_2 AI_API_KEY_3 DATABASE_URL; do
             value="${!name}"
             if [ -n "$value" ]; then
               if [[ "$value" == *$'\n'* || "$value" == *$'\r'* ]]; then

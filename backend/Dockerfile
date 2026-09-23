@@ -7,12 +7,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 COPY pyproject.toml .
 COPY api/ ./api/
 COPY data/ ./data/
+COPY alembic.ini ./
+COPY migrations/postgres/ ./migrations/postgres/
 RUN pip install --no-cache-dir .
 
 # Non-root user for production safety
-RUN addgroup --system app && adduser --system --group app \
-    && mkdir -p /var/lib/akim && chown app:app /var/lib/akim
-ENV SCENARIO_DB_PATH=/var/lib/akim/scenarios.sqlite3
+RUN addgroup --system app && adduser --system --group app
 USER app
 
 EXPOSE 8000

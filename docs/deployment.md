@@ -8,12 +8,14 @@ binds the API to `127.0.0.1:8010`; nginx serves it at
 its healthcheck and the HTTPS `/api/v1/ready` check pass; a failed update
 restores the previous container.
 `workflow_dispatch` can redeploy the current `main` commit.
-Saved scenarios live in the named Docker volume `akim-scenarios`, mounted at
-`/var/lib/akim`. The container runs one Uvicorn worker for this SQLite-backed
-MVP. The first `/ready` call creates schema version 1; later versions are
-rejected until an explicit migration is implemented. Replacing the container
-does not remove the volume. Back up the volume before changing the storage
-schema, and do not remove it when cleaning old images.
+Saved scenarios live in PostgreSQL 17 on the private Docker network
+`akim-private`, in the named volume `akim-postgres-data`. The backend uses
+`DATABASE_URL=postgresql+asyncpg://...` from `deploy.env`. The deployment
+script runs `alembic upgrade head` in a one-off image container before it
+switches the API container. `/ready` checks PostgreSQL and the expected
+Alembic revision; it does not create tables. Back up the PostgreSQL volume
+before a schema change. The old `akim-scenarios` SQLite volume is left intact
+but is not used by the PostgreSQL backend.
 
 ## One-time setup
 
@@ -22,6 +24,17 @@ schema, and do not remove it when cleaning old images.
    `api.helpmake-id.live` to `127.0.0.1:8010`. The image is built for Linux
    x86-64. The workflow
    creates `~/akim-ai-backend` itself.
+   Create a private Docker network, a persistent PostgreSQL volume, and a
+   `postgres:17-alpine` container named `akim-postgres-prod` on that network.
+   Keep its `postgres.env` file mode `600` and do not publish port 5432.
+   Use a unique URL-safe password and put the matching URL in the protected
+   `~/akim-ai-backend/deploy.env`:
+
+   ```text
+   DATABASE_URL=postgresql+asyncpg://akim:<password>@akim-postgres-prod:5432/akim
+   ```
+
+   The PostgreSQL container must be healthy before running `deploy.sh`.
 2. In the repository's GitHub **Settings → Secrets and variables → Actions**,
    add `DEPLOY_SSH_KEY` with the full private key for `useradmin`. The
    `IdentityFile` path in the local SSH config is a path on your computer; it
@@ -43,7 +56,11 @@ schema, and do not remove it when cleaning old images.
    multiple API keys; when any is set, the advisor tries numbered keys in
    order on 401, 402, 403, or 429 responses. Promotional credit codes are
    not API keys.
-5. Optionally add `DEPLOY_ENV_FILE` with other Docker environment-file content
+5. Add GitHub Actions secret `DATABASE_URL` with the same PostgreSQL URL,
+   or include it in `DEPLOY_ENV_FILE`. It is required for deployment. The
+   GitHub runner does not need direct database access; the deployment script
+   runs Alembic inside the private Docker network.
+6. Optionally add `DEPLOY_ENV_FILE` with other Docker environment-file content
    needed by the backend. Use [env.example](../deploy/env.example) as a
    starting point. Without this secret, the deploy defaults to
    `CORS_ORIGINS=https://helpmake-id.live`. The backend always allows this

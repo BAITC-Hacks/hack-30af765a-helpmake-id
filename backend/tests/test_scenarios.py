@@ -2,9 +2,11 @@
 
 import copy
 
+import pytest
 import sqlalchemy as sa
 
 from api.controllers import simulation
+from api.core import postgres
 from api.models import scenario as store
 
 from .test_simulation import EXAMPLE, decision
@@ -12,9 +14,13 @@ from .test_simulation import EXAMPLE, decision
 ALTERNATIVE = [*EXAMPLE[:4], decision('M6')]
 
 
-async def test_save_list_get_compare_delete_and_reopen(client, monkeypatch, tmp_path):
-    path = tmp_path / 'scenarios.sqlite3'
-    monkeypatch.setenv('SCENARIO_DB_PATH', str(path))
+@pytest.fixture(autouse=True)
+async def empty_scenarios():
+    async with postgres._engine(postgres.database_url()).begin() as connection:
+        await connection.execute(sa.delete(store.Scenarios))
+
+
+async def test_save_list_get_compare_delete_and_reopen(client):
     left_response = await client.post(
         '/api/v1/scenarios', json={'name': 'Исходный план', 'decisions': EXAMPLE}
     )
@@ -24,7 +30,6 @@ async def test_save_list_get_compare_delete_and_reopen(client, monkeypatch, tmp_
     assert left_response.status_code == right_response.status_code == 201
     left = left_response.json()
     right = right_response.json()
-    assert path.is_file()
     assert left['result'] == simulation.simulate(EXAMPLE)
     assert left['dataset_hash'] == left['result']['dataset_hash']
     assert left['created_at']
@@ -45,9 +50,7 @@ async def test_save_list_get_compare_delete_and_reopen(client, monkeypatch, tmp_
     assert saryarka['indicator_deltas']['E1'] > 0
     assert body['critical_pairs_left'] == left['result']['critical_pairs_after']
 
-    store._engine(str(path)).dispose()
-    store._engine.cache_clear()
-    store._schema_ready.discard(str(path))
+    await postgres._engine(postgres.database_url()).dispose()
     reopened = await client.get(f'/api/v1/scenarios/{left["id"]}')
     assert reopened.status_code == 200
     assert reopened.json()['result'] == left['result']
@@ -57,8 +60,7 @@ async def test_save_list_get_compare_delete_and_reopen(client, monkeypatch, tmp_
     assert (await client.delete(f'/api/v1/scenarios/{left["id"]}')).status_code == 404
 
 
-async def test_invalid_scenario_is_never_saved(client, monkeypatch, tmp_path):
-    monkeypatch.setenv('SCENARIO_DB_PATH', str(tmp_path / 'invalid.sqlite3'))
+async def test_invalid_scenario_is_never_saved(client):
     response = await client.post(
         '/api/v1/scenarios', json={'name': 'Bad', 'decisions': EXAMPLE[:4]}
     )
@@ -67,8 +69,7 @@ async def test_invalid_scenario_is_never_saved(client, monkeypatch, tmp_path):
     assert (await client.get('/api/v1/scenarios')).json() == []
 
 
-async def test_compare_rejects_different_dataset_versions(client, monkeypatch, tmp_path):
-    monkeypatch.setenv('SCENARIO_DB_PATH', str(tmp_path / 'versions.sqlite3'))
+async def test_compare_rejects_different_dataset_versions(client):
     current = (
         await client.post('/api/v1/scenarios', json={'name': 'Current', 'decisions': EXAMPLE})
     ).json()
@@ -105,14 +106,17 @@ async def test_readiness_reports_unavailable_storage(client, monkeypatch):
     assert response.json()['detail'] == 'Scenario storage unavailable.'
 
 
-async def test_unknown_storage_schema_version_is_rejected(client, monkeypatch, tmp_path):
-    path = tmp_path / 'future.sqlite3'
-    monkeypatch.setenv('SCENARIO_DB_PATH', str(path))
+async def test_unknown_storage_schema_version_is_rejected(client):
     assert (await client.get('/api/v1/ready')).status_code == 200
-    engine = store._engine(str(path))
-    with engine.begin() as connection:
-        connection.execute(sa.update(store.SchemaVersion).values(version=2))
-    store._schema_ready.discard(str(path))
-    response = await client.get('/api/v1/ready')
-    assert response.status_code == 503
-    assert response.json()['detail'] == 'Scenario storage unavailable.'
+    engine = postgres._engine(postgres.database_url())
+    async with engine.begin() as connection:
+        await connection.execute(sa.update(store.AlembicVersion).values(version_num='future'))
+    try:
+        response = await client.get('/api/v1/ready')
+        assert response.status_code == 503
+        assert response.json()['detail'] == 'Scenario storage unavailable.'
+    finally:
+        async with engine.begin() as connection:
+            await connection.execute(
+                sa.update(store.AlembicVersion).values(version_num=store.SCHEMA_REVISION)
+            )

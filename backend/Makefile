@@ -20,7 +20,7 @@ help:
 	@echo "  make check            Lint + format check (no writes)"
 	@echo "  make migration M=... Generate a new Alembic migration"
 	@echo "  make migrate          Apply all pending migrations"
-	@echo "  make up               Start Docker services (postgres + backend)"
+	@echo "  make up               Start PostgreSQL, apply migrations, start backend"
 	@echo "  make down             Stop Docker services"
 	@echo "  make logs             Tail Docker service logs"
 
@@ -34,15 +34,15 @@ test:
 	$(PYTEST) tests/ -v
 
 lint:
-	$(RUFF) check api/ tests/ scripts/
+	$(RUFF) check api/ tests/ scripts/ migrations/postgres/env.py migrations/postgres/versions/
 
 format:
-	$(RUFF) format api/ tests/ scripts/
-	$(RUFF) check --fix api/ tests/ scripts/
+	$(RUFF) format api/ tests/ scripts/ migrations/postgres/env.py migrations/postgres/versions/
+	$(RUFF) check --fix api/ tests/ scripts/ migrations/postgres/env.py migrations/postgres/versions/
 
 check:
-	$(RUFF) format --check api/ tests/ scripts/
-	$(RUFF) check api/ tests/ scripts/
+	$(RUFF) format --check api/ tests/ scripts/ migrations/postgres/env.py migrations/postgres/versions/
+	$(RUFF) check api/ tests/ scripts/ migrations/postgres/env.py migrations/postgres/versions/
 
 migration:
 	@if [ -z "$(M)" ]; then echo "Usage: make migration M=\"description\""; exit 1; fi

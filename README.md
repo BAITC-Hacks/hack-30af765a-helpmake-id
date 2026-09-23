@@ -257,6 +257,8 @@ Score = 0.7 × D_avg
 
 ## Локальный запуск всего проекта
 
+Подробные шаги и проверка запуска: [гайд по локальному запуску](docs/local-setup.md). В приватном репозитории уже есть `backend/.env` с настройками для команды; копировать `.env.example` не нужно.
+
 ### Требования
 
 - Docker + Docker Compose
@@ -267,10 +269,6 @@ Score = 0.7 × D_avg
 
 ```bash
 cd backend
-python3 -m venv .venv
-make install
-cp .env.example .env
-# Задайте уникальный URL-safe POSTGRES_PASSWORD в .env
 docker compose up --build -d
 ```
 
@@ -444,6 +442,7 @@ Git history репозитория отражает вклад участник�
 - [AI Advisor V1](docs/AI_ADVISOR.md)
 - [Архитектурные решения](docs/DECISIONS.md)
 - [Deployment](docs/deployment.md)
+- [Локальный запуск](docs/local-setup.md)
 - [Frontend](frontend/README.md)
 
 ---

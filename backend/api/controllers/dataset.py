@@ -5,6 +5,8 @@ import hashlib
 import json
 from pathlib import Path
 
+from . import scoring
+
 DATA_DIR = Path(__file__).resolve().parents[2] / 'data'
 _dataset: dict | None = None
 
@@ -36,4 +38,7 @@ def load_dataset() -> dict:
 
 def public_data() -> dict:
     """Return a copy so callers cannot mutate the cached source data."""
-    return copy.deepcopy(load_dataset())
+    source = copy.deepcopy(load_dataset())
+    indicators = {district['code']: district['indicators'] for district in source['districts']}
+    source['baseline_score'] = round(scoring.calculate(indicators, source)['score'], 2)
+    return source

@@ -76,6 +76,7 @@ class DatasetResponse(APIModel):
     version: str
     dataset_hash: str
     budget: int
+    baseline_score: float
     horizon_quarters: int
     decisions_required: int
     max_per_direction: int

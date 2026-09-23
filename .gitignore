@@ -42,3 +42,5 @@ env/
 .DS_Store
 .claude/
 tasks/
+node_modules/
+*.tsbuildinfo

@@ -3,6 +3,14 @@
 > HackAlem AI 2026 · Astana Innovations Special Track  
 > **Status:** Hackathon MVP in development
 
+### Run the current MVP locally
+
+Start the API from `backend/` with `pip install -e .` and `uvicorn api.main:app --reload`.
+In another terminal, run `npm ci` and `npm run dev` from `frontend/`. Vite proxies
+`/api` to `http://127.0.0.1:8000` locally; set `VITE_API_URL` in `frontend/.env`
+if your API runs elsewhere. See [FRONTEND_STRUCTURE.md](FRONTEND_STRUCTURE.md) for
+the frontend contract and [docs/deployment.md](docs/deployment.md) for deployment.
+
 ## Overview
 
 **Akim for 5 Hours** is an AI-assisted city-management simulator for exploring how a limited municipal budget can affect quality of life across hypothetical districts of Astana.

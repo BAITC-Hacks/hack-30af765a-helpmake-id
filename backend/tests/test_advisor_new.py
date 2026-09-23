@@ -41,6 +41,39 @@ async def test_new_advisor_routes_return_explicit_fallback(client, monkeypatch):
     assert simulation.simulate(EXAMPLE)['score'] == result['score']
 
 
+async def test_explain_uses_only_calculated_evidence_for_indicator_codes(client, monkeypatch):
+    _configured(monkeypatch)
+    decisions = [
+        {'measure_id': 'M1', 'district_code': 'esil'},
+        {'measure_id': 'M2'},
+        {'measure_id': 'M4', 'district_code': 'esil'},
+        {'measure_id': 'M5', 'district_code': 'esil'},
+        {'measure_id': 'M14'},
+    ]
+    result = simulation.simulate(decisions)
+
+    async def select_evidence(prompt, facts):
+        evidence = facts['evidence']
+        assert 'S1' in evidence['remaining_critical_indicators']['critical_pairs']
+        assert 'S2' in evidence['remaining_critical_indicators']['critical_pairs']
+        return {
+            'strengths': 'best_district',
+            'weaknesses': 'weakest_district',
+            'tradeoffs': 'budget',
+            'remaining_critical_indicators': 'critical_pairs',
+        }
+
+    monkeypatch.setattr(provider, '_call_provider', select_evidence)
+    response = await client.post('/api/v1/advisor/explain', json={'simulation_result': result})
+    body = response.json()
+    assert body['status'] == 'available'
+    assert 'Есиль' in body['strengths']
+    assert 'Нура' in body['weaknesses']
+    assert 'S1' in body['remaining_critical_indicators']
+    assert 'S2' in body['remaining_critical_indicators']
+    assert 'экономической' not in str(body)
+
+
 @pytest.mark.parametrize('question', ['', '   ', 'x' * 1001, 42])
 async def test_ask_rejects_empty_oversized_or_wrong_type(client, question):
     response = await client.post(

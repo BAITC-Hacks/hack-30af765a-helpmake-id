@@ -23,7 +23,86 @@ async def explain(submitted: dict) -> dict:
     current = _verified_result(submitted)
     if current is None:
         return {'status': 'unavailable', 'reason': 'Simulation result is stale or altered.'}
-    return await advisor_adapter.explain(current)
+    return await advisor_adapter.explain(
+        _explanation_evidence(current, dataset.load_dataset())
+    )
+
+
+def _explanation_evidence(result: dict, source: dict) -> dict[str, dict[str, str]]:
+    """Offer the model only server-written statements backed by this result."""
+    district_names = {item['code']: item['name'] for item in result['districts']}
+    indicator_names = {item['id']: item['name'] for item in source['indicators']}
+    measure_names = {item['id']: item['name'] for item in source['measures']}
+    best = max(
+        result['districts'],
+        key=lambda item: item['after']['score'] - item['before']['score'],
+    )
+    best_delta = round(best['after']['score'] - best['before']['score'], 2)
+    weakest_code = result['weakest_district_after']
+    weakest = next(item for item in result['districts'] if item['code'] == weakest_code)
+    critical = result['critical_pairs_after']
+    critical_text = (
+        'После сценария критическими остаются: '
+        + ', '.join(
+            f'{district_names[item["district_code"]]} — '
+            f'{indicator_names[item["indicator"]]} ({item["indicator"]}: {item["value"]:g})'
+            for item in critical
+        )
+        + '.'
+        if critical
+        else 'После сценария критических показателей нет.'
+    )
+    evidence = {
+        'strengths': {
+            'city_score': (
+                f'Городской Score изменился с {result["baseline_score"]:.2f} '
+                f'до {result["score"]:.2f} ({result["score_delta"]:+.2f}).'
+            ),
+            'best_district': (
+                f'Наибольшее изменение районного Score у района {best["name"]}: '
+                f'{best["before"]["score"]:.2f} → {best["after"]["score"]:.2f} '
+                f'({best_delta:+.2f}).'
+            ),
+        },
+        'weaknesses': {
+            'weakest_district': (
+                f'Слабейшим после сценария остаётся район {weakest["name"]} '
+                f'со Score {weakest["after"]["score"]:.2f}.'
+            ),
+            'critical_count': (
+                f'После сценария критических пар район–показатель: {len(critical)}.'
+            ),
+        },
+        'tradeoffs': {
+            'budget': (
+                f'Из бюджета {result["budget"]} потрачено {result["spent"]}; '
+                f'осталось {result["remaining_budget"]}.'
+            ),
+            'critical_change': (
+                'Число критических пар изменилось с '
+                f'{len(result["critical_pairs_before"])} до {len(critical)} '
+                f'при изменении городского Score на {result["score_delta"]:+.2f}.'
+            ),
+        },
+        'remaining_critical_indicators': {'critical_pairs': critical_text},
+    }
+    if not critical:
+        del evidence['weaknesses']['critical_count']
+    negative = [
+        (contribution, indicator, value)
+        for contribution in result['measure_contributions']
+        for indicator, value in contribution['applied_effects'].items()
+        if value < 0
+    ]
+    if negative:
+        contribution, indicator, value = negative[0]
+        evidence['tradeoffs']['negative_effect'] = (
+            f'Мера {contribution["measure_id"]} '
+            f'«{measure_names[contribution["measure_id"]]}» уменьшает показатель '
+            f'«{indicator_names[indicator]}» на {abs(value):g} '
+            'в затронутом районе до учёта остальных мер.'
+        )
+    return evidence
 
 
 def _goal_value(result: dict, goal: str, source: dict, target: str | None) -> float:

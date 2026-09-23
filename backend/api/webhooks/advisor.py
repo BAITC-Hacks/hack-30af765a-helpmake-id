@@ -2,17 +2,10 @@
 
 import json
 import os
-import re
 
 import httpx
 
 FIELDS = ('strengths', 'weaknesses', 'tradeoffs', 'remaining_critical_indicators')
-NUMBER_WORDS = re.compile(
-    r'\b(?:ноль|один|одна|одно|два|две|три|четыре|пять|шесть|семь|восемь|'
-    r'девять|десять|сто|тысяча|тысячи|тысяч|one|two|three|four|five|six|'
-    r'seven|eight|nine|ten|hundred|thousand)\b',
-    re.IGNORECASE,
-)
 
 
 def _api_keys() -> tuple[str, ...]:
@@ -29,15 +22,6 @@ def _api_keys() -> tuple[str, ...]:
 
 def _configured() -> bool:
     return bool(os.getenv('AI_API_URL') and os.getenv('AI_MODEL') and _api_keys())
-
-
-def _valid_text(value: object, measure_ids: set[str] | None = None) -> bool:
-    if not isinstance(value, str) or not value.strip() or len(value) > 2000:
-        return False
-    if re.search(r'\d', value) or NUMBER_WORDS.search(value):
-        return False
-    references = set(re.findall(r'\bM\d+\b', value))
-    return measure_ids is None or references <= measure_ids
 
 
 async def _call_provider(prompt: str, facts: dict) -> dict:
@@ -67,35 +51,30 @@ async def _call_provider(prompt: str, facts: dict) -> dict:
     return json.loads(response.json()['choices'][0]['message']['content'])
 
 
-async def explain(result: dict) -> dict:
+async def explain(evidence: dict[str, dict[str, str]]) -> dict:
     if not _configured():
         return {'status': 'unavailable', 'reason': 'AI provider is not configured.'}
-    facts = {
-        'score_delta': result['score_delta'],
-        'weakest_district': result['weakest_district_after'],
-        'critical_pairs_after': result['critical_pairs_after'],
-        'districts': result['districts'],
-        'measure_contributions': result['measure_contributions'],
-        'activated_synergies': result['activated_synergies'],
-    }
     prompt = (
-        'Объясни результаты симуляции на русском языке. Верни только JSON с ключами '
-        'strengths, weaknesses, tradeoffs, remaining_critical_indicators. '
-        'Для каждого ключа дай краткий текст. Не добавляй никаких чисел, цифр, '
-        'новых фактов или рекомендаций. Используй только предоставленный результат.'
+        'Выбери по одному идентификатору доказанного факта из каждого раздела evidence. '
+        'Верни только JSON с четырьмя ключами strengths, weaknesses, tradeoffs, '
+        'remaining_critical_indicators. Значение каждого ключа — ровно один '
+        'идентификатор из одноимённого раздела evidence, без пересказа и нового текста.'
     )
     try:
-        payload = await _call_provider(prompt, facts)
+        payload = await _call_provider(prompt, {'evidence': evidence})
         if (
             not isinstance(payload, dict)
             or set(payload) != set(FIELDS)
             or any(
-                not _valid_text(payload[field]) or len(payload[field]) > 1200
+                not isinstance(payload[field], str) or payload[field] not in evidence[field]
                 for field in FIELDS
             )
         ):
-            raise ValueError('Invalid advisor response')
-        return {'status': 'available', **payload}
+            raise ValueError('Invalid advisor evidence selection')
+        return {
+            'status': 'available',
+            **{field: evidence[field][payload[field]] for field in FIELDS},
+        }
     except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError):
         return {
             'status': 'unavailable',

@@ -1,0 +1,55 @@
+:root{--scene-tilt-x:0deg;--scene-tilt-y:0deg;--scene-glow-x:50%;--scene-glow-y:50%}
+.app-shell main{position:relative;isolation:isolate}
+.app-shell main:before{content:"";position:fixed;inset:72px 0 0;z-index:-1;pointer-events:none;background:radial-gradient(650px circle at var(--scene-glow-x) var(--scene-glow-y),#d7eadc77,transparent 72%)}
+.welcome-card,.map-panel,.score-panel,.compare-column{transform-style:preserve-3d;transition:transform .45s cubic-bezier(.2,.75,.2,1),box-shadow .35s ease}
+@media(hover:hover) and (pointer:fine) and (prefers-reduced-motion:no-preference){.welcome-card{transform:perspective(1400px) rotateX(var(--scene-tilt-x)) rotateY(var(--scene-tilt-y))}.map-panel,.score-panel,.compare-column{transform:perspective(1700px) rotateX(var(--scene-tilt-x)) rotateY(var(--scene-tilt-y))}.welcome-card:hover,.map-panel:hover,.score-panel:hover,.compare-column:hover{box-shadow:0 25px 55px #244b3024}}
+.welcome,.dashboard,.decisions-layout,.result-page,.map-result,.comparison-page{animation:page-rise .55s both}
+.welcome-grid>*:nth-child(2),.center-grid>*,.measure-card,.indicator-tile,.district-results>*{animation:card-reveal .5s both}
+.center-grid>*:nth-child(2),.measure-card:nth-child(2n),.indicator-tile:nth-child(2n){animation-delay:.07s}
+.center-grid>*:nth-child(3),.measure-card:nth-child(3n),.indicator-tile:nth-child(3n){animation-delay:.14s}
+.primary,.secondary,.text-button,.district-item,.indicator-tile,.measure-card,.quarter-buttons button,.compare-nav{transition:transform .22s ease,box-shadow .22s ease,background-color .22s ease,border-color .22s ease}
+.primary:not(:disabled):hover,.secondary:not(:disabled):hover,.quarter-buttons button:hover{transform:translateY(-2px);box-shadow:0 8px 18px #24523b20}
+.primary:not(:disabled):active,.secondary:not(:disabled):active,.quarter-buttons button:active{transform:translateY(1px) scale(.985)}
+.indicator-tile:hover,.measure-card:hover{transform:translateY(-3px);box-shadow:0 10px 25px #28503a16}
+.bar i{transition:width .65s cubic-bezier(.2,.8,.2,1)}
+.quarter-buttons button.active{box-shadow:0 0 0 3px #6fba8855}
+.guide-target{outline:2px solid #73ae83!important;outline-offset:5px;box-shadow:0 0 0 9px #a7d9ab38,0 14px 32px #26523a20!important;position:relative;z-index:3}
+.experience-guide,.guide-launcher{position:fixed;z-index:50;right:22px;bottom:22px;box-shadow:0 18px 50px #193d2d30}
+.experience-guide{width:min(340px,calc(100vw - 30px));padding:17px 18px 16px;background:#fffffff2;border:1px solid #c8e0ce;border-radius:12px;backdrop-filter:blur(14px);animation:guide-enter .3s both}
+.guide-head{display:flex;align-items:center;justify-content:space-between;gap:10px;color:#46715a;font-size:9px;font-weight:900;letter-spacing:.11em}
+.guide-head button{border:0;background:#edf5ee;color:#315841;border-radius:5px;width:25px;height:25px;font-size:17px;line-height:1}
+.guide-progress{display:flex;gap:5px;margin:12px 0 14px}.guide-progress button{height:4px;flex:1;border:0;border-radius:5px;background:#d5e6d9;padding:0}.guide-progress button.active{background:#37815c}
+.guide-copy small{font-size:9px;font-weight:800;color:#5b9270;letter-spacing:.07em}.guide-copy h3{font-size:16px;margin:5px 0 6px;color:#244536}.guide-copy p{font-size:11px;line-height:1.55;color:#5d7565;margin:0;min-height:51px}
+.guide-actions{display:flex;justify-content:space-between;gap:7px;margin-top:14px}.guide-actions button,.guide-launcher{border:1px solid #bad8c2;background:#eff8f0;color:#28563d;border-radius:6px;padding:9px 11px;font-size:10px;font-weight:800}.guide-actions button:last-child{background:#22543d;border-color:#22543d;color:white}.guide-actions button:hover,.guide-launcher:hover{filter:brightness(.96)}
+.guide-launcher{padding:11px 15px}
+@keyframes page-rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes card-reveal{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
+@keyframes guide-enter{from{opacity:0;transform:translateY(9px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:720px){.experience-guide,.guide-launcher{right:12px;bottom:12px}.app-shell[data-page="decisions"] .experience-guide,.app-shell[data-page="decisions"] .guide-launcher{bottom:80px}.experience-guide{padding:13px}.guide-copy p{min-height:0}}
+@media(prefers-reduced-motion:reduce){.app-shell main:before{display:none}.welcome,.dashboard,.decisions-layout,.result-page,.map-result,.comparison-page,.welcome-grid>*,.center-grid>*,.measure-card,.indicator-tile,.district-results>*,.experience-guide{animation:none!important}.welcome-card,.map-panel,.score-panel,.compare-column,.primary,.secondary,.text-button,.district-item,.indicator-tile,.measure-card,.quarter-buttons button,.compare-nav,.bar i{transition:none!important;transform:none!important}}
+
+/* Calmer pastel surfaces keep information cards distinct without adding visual noise. */
+.experience-guide{width:min(310px,calc(100vw - 30px));padding:14px 15px;background:#f4f8f3f5;border-color:#d9e6da;box-shadow:0 12px 34px #193d2d20}
+.guide-copy{padding:10px 12px;background:#edf4ec;border:1px solid #e2ece0;border-radius:8px}
+.guide-copy p{min-height:0;color:#536b5b}
+.guide-progress button{background:#dce9dc}
+.guide-progress button.active{background:#689579}
+.guide-actions button,.guide-launcher{background:#eaf3e9;border-color:#cbdcc9;color:#315b42}
+.guide-actions button:last-child{background:#557b62;border-color:#557b62;color:#fff}
+.guide-actions button:hover,.guide-launcher:hover{filter:brightness(.98)}
+.guide-head{color:#52735d}
+.guide-head button{background:#e5eee4;color:#45634d}
+.guide-target{outline-color:#88ae8c!important;box-shadow:0 0 0 8px #bfd8bd35,0 12px 28px #26523a17!important}
+
+.insight-box{background:#fbfcf8;border-color:#e6ebe0}
+.insight-box.soft,.guidance-box{background:#f1f6ef;border-color:#e0e9dc}
+.selected-card,.advisor-copy>div,.contribution{background:#f4f8f2;border-color:#e2ebdf}
+.measure-card.selected{background:#eef5ed;border-color:#bfd5be}
+.inline-error{background:#fff3ef;border:1px solid #f0ddd5;color:#87564d}
+.evidence-card{background:#fcfcf8}
+.compare-summary{background:#eff6ee;border-color:#d4e4d3;color:#355c43}
+.insight-box,.guidance-box,.selected-card,.advisor-copy>div,.evidence-card,.contribution,.compare-metrics>div,.compare-empty{border-radius:8px}
+.measure-card,.district-list,.map-panel,.insight-panel,.selection-rail,.catalog,.guidance,.card,.advisor-panel,.score-panel{border-radius:8px}
+.guide-launcher{box-shadow:0 8px 24px #193d2d18}
+
+@media(max-width:720px){.experience-guide{width:calc(100vw - 24px);right:12px;bottom:12px}.app-shell[data-page="decisions"] .experience-guide{bottom:80px}.guide-copy{padding:9px 10px}}

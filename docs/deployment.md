@@ -30,16 +30,19 @@ schema, and do not remove it when cleaning old images.
    `20.124.93.89`. From a trusted machine, inspect its fingerprint before
    storing it; `ssh-keyscan -H 20.124.93.89` can produce the line, but does
    not authenticate the server by itself.
-4. For the AI advisor, add GitHub Actions **secret** `AI_API_KEY` with an
-   OpenAI Platform API key, without quotes or `Bearer `. Promotional credit
-   codes belong in OpenAI Billing and are not API keys. One API key can use
-   credits applied to its account. Add GitHub Actions **variables**
-   `AI_API_URL=https://api.openai.com/v1/chat/completions` and
-   `AI_MODEL=gpt-4.1-mini`. The deploy job passes these settings to the
-   backend. Optional `AI_API_KEY_1`, `AI_API_KEY_2`, and `AI_API_KEY_3`
-   secrets support multiple API keys; when any is set, the advisor tries
-   numbered keys in order on 401, 402, 403, or 429 responses. Configure
-   spending limits with OpenAI; GitHub secrets only store credentials.
+4. For the AI advisor, add GitHub Actions **secret** `AI_API_KEY` with a
+   provider API key, without quotes or `Bearer `. Add GitHub Actions
+   **variables** `AI_API_URL` (the complete chat-completions URL) and
+   `AI_MODEL` (the model or Azure deployment name). For OpenAI Platform,
+   use `AI_API_URL=https://api.openai.com/v1/chat/completions` and a model
+   available to the key. For the HR Azure OpenAI resource, use its endpoint
+   followed by `/openai/v1/chat/completions` and its deployment name. Azure
+   usage is billed through Azure and does not draw on OpenAI Platform
+   promotional credits. The deploy job passes these settings to the backend.
+   Optional `AI_API_KEY_1`, `AI_API_KEY_2`, and `AI_API_KEY_3` secrets support
+   multiple API keys; when any is set, the advisor tries numbered keys in
+   order on 401, 402, 403, or 429 responses. Promotional credit codes are
+   not API keys.
 5. Optionally add `DEPLOY_ENV_FILE` with other Docker environment-file content
    needed by the backend. Use [env.example](../deploy/env.example) as a
    starting point. Without this secret, the deploy defaults to
@@ -54,8 +57,8 @@ environment protection rules in GitHub if desired. Secrets can be repository
 secrets or environment secrets in `production`. No private key or application
 secret is committed to this repository.
 
-To test the OpenAI key after setting the secret and variables, run **Verify OpenAI
-API keys** from the repository's Actions tab. It sends one short chat request
+To test the provider key after setting the secret and variables, run **Verify AI
+provider key** from the repository's Actions tab. It sends one short chat request
 per configured key and reports whether each request succeeded without printing keys.
 This checks chat access for `AI_MODEL`; it does not report remaining credits.
 

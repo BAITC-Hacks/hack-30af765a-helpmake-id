@@ -1,4 +1,4 @@
-name: Verify OpenAI API keys
+name: Verify AI provider key
 
 on:
   workflow_dispatch:
@@ -28,12 +28,22 @@ jobs:
           import re
           import sys
           import urllib.error
+          import urllib.parse
           import urllib.request
 
           url = os.getenv('AI_API_URL')
           model = os.getenv('AI_MODEL')
-          if url != 'https://api.openai.com/v1/chat/completions' or not model:
-              print('Set AI_API_URL to the OpenAI chat-completions URL and set AI_MODEL.')
+          parsed = urllib.parse.urlparse(url or '')
+          is_openai = url == 'https://api.openai.com/v1/chat/completions'
+          is_azure = (
+              parsed.scheme == 'https'
+              and parsed.hostname is not None
+              and parsed.hostname.endswith(('.openai.azure.com', '.services.ai.azure.com'))
+              and parsed.path == '/openai/v1/chat/completions'
+              and not any((parsed.params, parsed.query, parsed.fragment, parsed.username))
+          )
+          if not (is_openai or is_azure) or not model:
+              print('Set AI_API_URL to a supported chat-completions endpoint and set AI_MODEL.')
               sys.exit(1)
 
           body = json.dumps({
